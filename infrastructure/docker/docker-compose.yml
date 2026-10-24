@@ -1,0 +1,54 @@
+# Local development stack. NOT yet executed in the authoring sandbox (no Docker there).
+#   docker compose -f infrastructure/docker/docker-compose.yml up -d db
+#   DATABASE_URL=postgres://mishwar:mishwar_dev_only@localhost:5432/mishwar ./database/run-migrations.sh
+# Redis is optional: start it only when a feature needs it (see docs/adr/0003-redis-optional.md):
+#   docker compose -f infrastructure/docker/docker-compose.yml --profile redis up -d
+name: mishwar-dev
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: mishwar
+      POSTGRES_USER: mishwar
+      POSTGRES_PASSWORD: mishwar_dev_only      # development only; never reuse
+    ports:
+      - "127.0.0.1:5432:5432"                   # bound to localhost only
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mishwar -d mishwar"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Throwaway database for integration/concurrency tests (tmpfs: wiped on restart).
+  db_test:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: mishwar_test
+      POSTGRES_USER: mishwar
+      POSTGRES_PASSWORD: mishwar_test_only
+    ports:
+      - "127.0.0.1:5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mishwar -d mishwar_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    profiles: ["redis"]
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db_data:
