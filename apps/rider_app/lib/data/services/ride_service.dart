@@ -1,4 +1,3 @@
-library rider_app.data.services.ride_service;
 
 import 'dart:math';
 

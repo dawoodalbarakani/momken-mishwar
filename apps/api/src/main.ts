@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { AppLogger } from './logger/logger.service.js';
@@ -11,7 +12,7 @@ async function bootstrap() {
   // ConfigModule validates env eagerly on import; this also confirms required vars.
   await import('./config/config.module.js');
 
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(), {
     bufferLogs: true,
     logger: new AppLogger(),
     cors: {

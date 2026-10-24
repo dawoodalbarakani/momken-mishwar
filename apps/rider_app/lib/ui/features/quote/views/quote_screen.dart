@@ -1,4 +1,3 @@
-library rider_app.ui.features.quote.views.quote_screen;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

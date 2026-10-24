@@ -1,11 +1,10 @@
-library rider_app.ui.features.auth.views.otp_screen;
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/app_constants.dart';
+import '../../../../../core/app_constants.dart';
 import '../view_models/auth_view_model.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
@@ -26,8 +25,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   @override
   void dispose() {
     _resendTimer?.cancel();
-    for (final c in _controllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _controllers) { c.dispose(); }
+    for (final f in _focusNodes) { f.dispose(); }
     super.dispose();
   }
 

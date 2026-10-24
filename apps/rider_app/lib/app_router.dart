@@ -1,6 +1,5 @@
-library rider_app.app_router;
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'ui/features/auth/views/login_screen.dart';
@@ -19,7 +18,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/otp', builder: (context, state) {
-        final phone = state.queryParameters['phone'] ?? '';
+        final phone = state.uri.queryParameters['phone'] ?? '';
         return OtpScreen(phone: phone);
       }),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),

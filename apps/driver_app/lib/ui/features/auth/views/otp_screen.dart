@@ -1,4 +1,3 @@
-library driver_app.ui.features.auth.views.otp_screen;
 
 import 'dart:async';
 
@@ -26,8 +25,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   @override
   void dispose() {
     _resendTimer?.cancel();
-    for (final c in _controllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _controllers) { c.dispose(); }
+    for (final f in _focusNodes) { f.dispose(); }
     super.dispose();
   }
 

@@ -1,10 +1,8 @@
-library rider_app.ui.features.auth.view_models.auth_view_model;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../data/services/dio_client.dart';
-import '../../../../domain/models/auth_result.dart';
 import '../../../../domain/models/auth_user.dart';
 
 /// ViewModel for the authentication flow (request / verify OTP).

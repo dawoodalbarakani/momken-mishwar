@@ -1,9 +1,7 @@
-library rider_app.ui.features.ride_request.view_models.ride_request_view_model;
-
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../data/repositories/ride_repository.dart';
 import '../../../../domain/models/ride.dart';
 
@@ -28,12 +26,6 @@ class RideRequestViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  String _generateIdempotencyKey() {
-    final ms = DateTime.now().millisecondsSinceEpoch.toString();
-    final random = Random.secure().nextInt(900000) + 100000;
-    return 'ride_${ms}_$random';
-  }
-
   Future<bool> createRide({
     required String pickup,
     required String destination,
@@ -46,7 +38,6 @@ class RideRequestViewModel extends ChangeNotifier {
     _driverName = null;
     notifyListeners();
     try {
-      final idempotencyKey = _generateIdempotencyKey();
       final rideId = await _rideRepository.createRide(
         pickup: pickup,
         destination: destination,

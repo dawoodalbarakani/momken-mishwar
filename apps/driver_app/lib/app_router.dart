@@ -1,4 +1,3 @@
-library driver_app.app_router;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

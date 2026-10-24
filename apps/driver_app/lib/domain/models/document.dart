@@ -1,4 +1,3 @@
-library driver_app.domain.models.document;
 
 import 'auth_user.dart';
 

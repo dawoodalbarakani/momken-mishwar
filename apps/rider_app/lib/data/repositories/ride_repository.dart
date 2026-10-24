@@ -1,11 +1,11 @@
-library rider_app.data.repositories.ride_repository;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/quote_api_model.dart';
 import '../models/ride_api_model.dart';
 import '../../domain/models/quote.dart';
 import '../../domain/models/ride.dart';
-import '../services/ride_service.dart;
+import '../services/dio_client.dart';
+import '../services/ride_service.dart';
 
 /// Single source of truth for quotes and rides. Transforms raw API models into
 /// clean domain models.

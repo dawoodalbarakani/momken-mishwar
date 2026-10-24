@@ -1,4 +1,3 @@
-library driver_app.core.app_constants;
 
 import 'dart:io';
 

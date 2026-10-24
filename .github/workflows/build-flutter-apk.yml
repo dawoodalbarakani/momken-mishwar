@@ -1,0 +1,115 @@
+name: Build Flutter APKs
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'apps/rider_app/**'
+      - 'apps/driver_app/**'
+      - '.github/workflows/build-flutter-apk.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'apps/rider_app/**'
+      - 'apps/driver_app/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-rider:
+    name: Build Rider App APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: apps/rider_app
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: apps/rider_app
+        run: flutter analyze
+
+      - name: Inject Google Maps API key
+        working-directory: apps/rider_app
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          if [ -n "$GOOGLE_MAPS_API_KEY" ]; then
+            sed -i "s|android:value=\"AIzaSyDVNVt5hMWuX5Rjr80IXIa-AJ7m7qIrQCk\"|android:value=\"$GOOGLE_MAPS_API_KEY\"|" android/app/src/main/AndroidManifest.xml
+          fi
+
+      - name: Build APK (debug)
+        working-directory: apps/rider_app
+        run: flutter build apk --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rider-app-debug-apk
+          path: apps/rider_app/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
+
+  build-driver:
+    name: Build Driver App APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: apps/driver_app
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: apps/driver_app
+        run: flutter analyze
+
+      - name: Inject Google Maps API key
+        working-directory: apps/driver_app
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          if [ -n "$GOOGLE_MAPS_API_KEY" ]; then
+            sed -i "s|android:value=\"AIzaSyDVNVt5hMWuX5Rjr80IXIa-AJ7m7qIrQCk\"|android:value=\"$GOOGLE_MAPS_API_KEY\"|" android/app/src/main/AndroidManifest.xml
+          fi
+
+      - name: Build APK (debug)
+        working-directory: apps/driver_app
+        run: flutter build apk --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: driver-app-debug-apk
+          path: apps/driver_app/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14

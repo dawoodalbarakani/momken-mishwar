@@ -1,4 +1,3 @@
-library rider_app.data.models.quote_api_model;
 
 /// Raw API model for POST /quotes.
 class QuoteApiModel {

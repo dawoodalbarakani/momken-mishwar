@@ -1,4 +1,3 @@
-library driver_app.ui.features.home.views.home_screen;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

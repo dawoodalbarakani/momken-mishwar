@@ -1,11 +1,6 @@
-library rider_app.ui.features.ride_tracking.views.ride_tracking_screen;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../../../core/app_constants.dart';
-import '../../../../data/repositories/ride_repository.dart';
 import '../view_models/ride_tracking_view_model.dart';
 
 class RideTrackingScreen extends ConsumerWidget {
@@ -58,6 +53,7 @@ class RideTrackingScreen extends ConsumerWidget {
                       child: ElevatedButton(
                         onPressed: () async {
                           final ok = await vm.cancelRide();
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(ok ? 'تم إلغاء الرحلة' : 'فشل الإلغاء')),
                           );

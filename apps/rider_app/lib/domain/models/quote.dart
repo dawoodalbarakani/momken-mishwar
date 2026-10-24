@@ -1,4 +1,3 @@
-library rider_app.domain.models.quote;
 
 /// Clean domain model for a server-computed fare estimate.
 class Quote {

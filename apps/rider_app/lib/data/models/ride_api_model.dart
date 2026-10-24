@@ -1,4 +1,3 @@
-library rider_app.data.models.ride_api_model;
 
 /// Raw API model for POST /rides and GET /rides/:id.
 class RideApiModel {

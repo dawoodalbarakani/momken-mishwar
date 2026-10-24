@@ -1,4 +1,3 @@
-library driver_app.data.models.auth_api_models;
 
 class OtpVerifyApiModel {
   const OtpVerifyApiModel({required this.accessToken, this.refreshToken});

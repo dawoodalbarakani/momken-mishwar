@@ -1,4 +1,3 @@
-library rider_app.data.services.auth_service;
 
 import 'dio_client.dart';
 

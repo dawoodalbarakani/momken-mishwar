@@ -1,4 +1,3 @@
-library driver_app.data.repositories.offers_repository;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/offer.dart';

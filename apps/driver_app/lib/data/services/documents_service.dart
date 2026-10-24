@@ -1,4 +1,3 @@
-library driver_app.data.services.documents_service;
 
 import '../../domain/models/document.dart';
 import 'dio_client.dart';

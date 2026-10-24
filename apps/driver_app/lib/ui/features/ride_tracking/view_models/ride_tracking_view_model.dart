@@ -1,4 +1,3 @@
-library driver_app.ui.features.ride_tracking.view_models.ride_tracking_view_model;
 
 import 'dart:async';
 
@@ -48,7 +47,7 @@ class RideTrackingViewModel extends ChangeNotifier {
   RideCancellation? _cancellation;
   RideCancellation? get cancellation => _cancellation;
 
-  bool _isConnected = false;
+  final bool _isConnected = false;
   bool get isConnected => _isConnected;
 
   bool _isLoading = true;

@@ -1,4 +1,3 @@
-library rider_app.domain.models.auth_user;
 
 /// Clean domain model for an authenticated rider.
 class AuthUser {

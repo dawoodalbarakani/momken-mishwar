@@ -1,4 +1,3 @@
-library driver_app.data.services.dio_client;
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

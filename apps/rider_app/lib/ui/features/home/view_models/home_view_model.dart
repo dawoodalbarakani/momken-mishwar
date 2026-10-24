@@ -1,4 +1,3 @@
-library rider_app.ui.features.home.view_models.home_view_model;
 
 import 'dart:async';
 
@@ -33,7 +32,7 @@ class HomeViewModel extends ChangeNotifier {
   LatLng? _destination;
   LatLng? get destination => _destination;
 
-  List<SavedPlace> _savedPlaces = const [];
+  final List<SavedPlace> _savedPlaces = const [];
   List<SavedPlace> get savedPlaces => _savedPlaces;
 
   ConnectionStatus _connectionStatus = ConnectionStatus.unknown;

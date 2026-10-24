@@ -1,4 +1,3 @@
-library driver_app.data.services.connectivity_service;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

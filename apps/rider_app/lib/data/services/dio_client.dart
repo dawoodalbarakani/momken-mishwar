@@ -1,8 +1,7 @@
-library rider_app.data.services.dio_client;
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/app_constants.dart';
+import '../../core/app_constants.dart';
 import './secure_storage_service.dart';
 
 /// Unified API error matching the v1 error contract:
@@ -32,7 +31,7 @@ class ApiException implements Exception {
 
 /// Dio HTTP client with:
 ///   - baseUrl from environment variable
-///   - automatic Authorization: Bearer <access token> injection
+///   - automatic Authorization: Bearer `access token` injection
 ///   - Idempotency-Key support on write requests
 ///   - unified error handling
 class DioClient {
@@ -51,7 +50,6 @@ class DioClient {
     _dio.interceptors.add(LogInterceptor(
       request: AppConstants.apiBaseUrl.contains('localhost') ||
           AppConstants.apiBaseUrl.contains('10.0.2.2'),
-      response: false,
     ));
   }
 
@@ -101,12 +99,12 @@ class DioClient {
     return response.data as T;
   }
 
-  String? _extractRequestId(Map<String, String> headers) {
-    return headers['x-request-id'] ?? headers['request-id'];
+  String? _extractRequestId(Headers headers) {
+    return headers.value('x-request-id') ?? headers.value('request-id');
   }
 }
 
-/// Injects Authorization: Bearer <access token> on every request.
+/// Injects Authorization: Bearer `access token` on every request.
 class _AuthInterceptor extends Interceptor {
   _AuthInterceptor(this._storage);
   final SecureStorageService _storage;

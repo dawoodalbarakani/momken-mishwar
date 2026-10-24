@@ -1,4 +1,3 @@
-library driver_app.domain.models.offer;
 
 enum OfferStatus { pending, accepted, rejected, expired }
 

@@ -1,4 +1,3 @@
-library rider_app.domain.models.ride;
 
 enum RideRequestStatus { idle, searching, driverFound, cancelled, error }
 

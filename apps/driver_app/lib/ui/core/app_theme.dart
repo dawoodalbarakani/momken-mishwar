@@ -1,4 +1,3 @@
-library driver_app.ui.core.app_theme;
 
 import 'package:flutter/material.dart';
 

@@ -1,4 +1,3 @@
-library driver_app.domain.models.available_ride;
 
 class AvailableRide {
   const AvailableRide({

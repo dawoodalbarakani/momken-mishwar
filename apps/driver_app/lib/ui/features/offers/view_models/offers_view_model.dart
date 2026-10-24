@@ -1,4 +1,3 @@
-library driver_app.ui.features.offers.view_models.offers_view_model;
 
 import 'dart:async';
 import 'dart:math';
@@ -58,7 +57,7 @@ class OffersViewModel extends ChangeNotifier {
   }
 
   void _scheduleExpiry() {
-    for (final o in _offers) _scheduleExpiryFor(o);
+    for (final o in _offers) { _scheduleExpiryFor(o); }
   }
 
   void _scheduleExpiryFor(Offer offer) {
@@ -148,7 +147,7 @@ class OffersViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    for (final t in _expiryTimers.values) t.cancel();
+    for (final t in _expiryTimers.values) { t.cancel(); }
     _expiryTimers.clear();
     super.dispose();
   }

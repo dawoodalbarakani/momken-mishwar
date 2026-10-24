@@ -1,9 +1,7 @@
-library rider_app.ui.features.ride_request.views.ride_request_screen;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../../../data/repositories/ride_repository.dart';
+import '../../../../domain/models/ride.dart';
 import '../view_models/ride_request_view_model.dart';
 
 class RideRequestScreen extends ConsumerWidget {

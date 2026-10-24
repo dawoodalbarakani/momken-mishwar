@@ -1,4 +1,3 @@
-library driver_app.domain.models.auth_user;
 
 class AuthUser {
   const AuthUser({required this.id, required this.phone, this.name, this.verificationStatus});

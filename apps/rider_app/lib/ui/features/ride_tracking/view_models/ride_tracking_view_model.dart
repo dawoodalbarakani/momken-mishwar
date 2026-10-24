@@ -1,4 +1,3 @@
-library rider_app.ui.features.ride_tracking.view_models.ride_tracking_view_model;
 
 import 'dart:async';
 

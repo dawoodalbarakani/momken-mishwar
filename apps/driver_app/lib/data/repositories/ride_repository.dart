@@ -1,4 +1,3 @@
-library driver_app.data.repositories.ride_repository;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/available_ride.dart';

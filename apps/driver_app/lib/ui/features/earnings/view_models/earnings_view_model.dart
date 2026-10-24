@@ -1,4 +1,3 @@
-library driver_app.ui.features.earnings.view_models.earnings_view_model;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

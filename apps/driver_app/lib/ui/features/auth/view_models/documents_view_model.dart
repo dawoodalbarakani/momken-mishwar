@@ -1,4 +1,3 @@
-library driver_app.ui.features.auth.view_models.documents_view_model;
 
 import 'package:driver_app/domain/models/auth_user.dart';
 import 'package:flutter/foundation.dart';
@@ -22,7 +21,7 @@ class DocumentsViewModel extends ChangeNotifier {
   Map<DocumentType, DriverDocument> _documents = const {};
   Map<DocumentType, DriverDocument> get documents => _documents;
 
-  bool _isLoading = false;
+  final bool _isLoading = false;
   bool get isLoading => _isLoading;
 
   bool _submitting = false;

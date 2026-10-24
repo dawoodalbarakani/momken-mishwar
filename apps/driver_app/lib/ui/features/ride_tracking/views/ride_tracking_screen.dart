@@ -1,4 +1,3 @@
-library driver_app.ui.features.ride_tracking.views.ride_tracking_screen;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,7 +67,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
                     child: ElevatedButton(
                       onPressed: vm.isLoading ? null : () async {
                         final ok = await vm.verifyAssignment();
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(ok ? 'تم التحقق من إسناد الرحلة' : 'فشل التحقق من الإسناد')),
                         );
@@ -107,8 +106,8 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
                   height: 48,
                   child: OutlinedButton(
                     onPressed: vm.isLoading ? null : () => _showCancelDialog(context, vm),
-                    child: const Text('إلغاء الرحلة'),
                     style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('إلغاء الرحلة'),
                   ),
                 ),
                 if (vm.error != null) ...[

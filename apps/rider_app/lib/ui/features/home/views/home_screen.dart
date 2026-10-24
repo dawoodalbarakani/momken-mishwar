@@ -1,9 +1,7 @@
-library rider_app.ui.features.home.views.home_screen;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../data/services/connectivity_service.dart';
 import '../view_models/home_view_model.dart';
 
@@ -61,8 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           filled: true,
                         ),
                         onSubmitted: (q) async {
-                          final results = await vm.searchPlaces(q);
-                          // TODO: show place picker bottom sheet with results
+                          await vm.searchPlaces(q);
                         },
                       ),
                     ),

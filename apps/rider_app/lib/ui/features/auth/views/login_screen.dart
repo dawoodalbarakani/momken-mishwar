@@ -1,9 +1,8 @@
-library rider_app.ui.features.auth.views.login_screen;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/app_constants.dart';
+import '../../../../../core/app_constants.dart';
 import '../view_models/auth_view_model.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {

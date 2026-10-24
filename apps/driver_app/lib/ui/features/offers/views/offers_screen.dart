@@ -1,4 +1,3 @@
-library driver_app.ui.features.offers.views.offers_screen;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -103,12 +102,13 @@ class OffersScreen extends ConsumerWidget {
 
   void _accept(BuildContext context, OffersViewModel vm, Offer o) {
     vm.acceptOffer(o.offerId).then((ok) {
+      if (!context.mounted) return;
       if (!vm.accepting) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(ok ? 'تم قبول العرض وتوجيهك للرحلة' : vm.error ?? 'فشل القبول')),
         );
       }
-      if (ok) context.go('/ride-track/${o.rideId}');
+      if (ok && context.mounted) context.go('/ride-track/${o.rideId}');
     });
   }
 

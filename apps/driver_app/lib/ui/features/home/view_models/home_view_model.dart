@@ -1,4 +1,3 @@
-library driver_app.ui.features.home.view_models.home_view_model;
 
 import 'dart:async';
 

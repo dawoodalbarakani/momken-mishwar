@@ -1,4 +1,3 @@
-library driver_app.domain.models.earnings;
 
 class CompletedRide {
   const CompletedRide({

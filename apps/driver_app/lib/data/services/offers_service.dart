@@ -1,4 +1,3 @@
-library driver_app.data.services.offers_service;
 
 import 'dart:async';
 

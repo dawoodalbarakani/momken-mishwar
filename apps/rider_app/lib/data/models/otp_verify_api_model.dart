@@ -1,4 +1,3 @@
-library rider_app.data.models.otp_verify_api_model;
 
 /// Raw API model for POST /auth/otp/verify.
 class OtpVerifyApiModel {

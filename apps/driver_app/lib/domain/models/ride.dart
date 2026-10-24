@@ -1,4 +1,3 @@
-library driver_app.domain.models.ride;
 
 enum RideStatus { assigned, arriving, arrived, inProgress, completed, cancelled }
 

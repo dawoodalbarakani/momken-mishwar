@@ -1,8 +1,7 @@
-library rider_app.ui.features.ride_completion.views.ride_completion_screen;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../core/app_constants.dart';
+import '../../../../core/app_constants.dart';
 
 class RideCompletionScreen extends StatelessWidget {
   final String rideId;
