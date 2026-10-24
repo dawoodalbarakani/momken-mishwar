@@ -1,0 +1,33 @@
+{
+  "name": "admin-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mishwar Yemen — لوحة الإدارة web (Next.js App Router, TypeScript, Tailwind, RTL)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.5.0",
+    "lucide-react": "^0.468.0",
+    "date-fns": "^3.6.0",
+    "zod": "^3.23.0",
+    "js-cookie": "^3.0.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/react": "^19.0.0",
+    "@types/node": "^22.0.0",
+    "@types/js-cookie": "^3.0.6",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0"
+  }
+}

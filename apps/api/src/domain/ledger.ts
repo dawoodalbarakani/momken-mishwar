@@ -16,7 +16,7 @@
  * idempotency key so a replayed request cannot post twice.
  */
 
-import { CurrencyCode, assertNonNegativeMinor } from './money';
+import { CurrencyCode, assertNonNegativeMinor } from './money.js';
 
 export type LedgerEntryType =
   | 'EARNING'

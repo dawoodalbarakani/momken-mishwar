@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LedgerError, balanceMinor, buildCashRideEntries, buildSettlementEntry } from './ledger';
+import { LedgerError, balanceMinor, buildCashRideEntries, buildSettlementEntry } from './ledger.js';
 
 const ride = { rideId: 'r-1', driverId: 'd-1', currency: 'XTS', grossMinor: 450, commissionMinor: 68, driverNetMinor: 382 };
 

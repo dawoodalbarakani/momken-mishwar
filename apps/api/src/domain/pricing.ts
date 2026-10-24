@@ -19,7 +19,7 @@
  * MANUAL fares are final: no surcharges, discounts or minimum-fare logic.
  */
 
-import { CurrencyCode, assertNonNegativeMinor, mulDivRound, roundToStep } from './money';
+import { CurrencyCode, assertNonNegativeMinor, mulDivRound, roundToStep } from './money.js';
 
 export type PricingMode = 'FIXED_ROUTE' | 'DISTANCE_TIME' | 'MANUAL';
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { deriveStartCode, newStartCodeNonce, verifyStartCode } from './start-code';
+import { deriveStartCode, newStartCodeNonce, verifyStartCode } from './start-code.js';
 
 const secret = 'test-secret-not-for-production';
 const rideId = '11111111-1111-4111-8111-111111111111';

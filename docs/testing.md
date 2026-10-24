@@ -24,6 +24,27 @@ npm run typecheck                 # tsc --noEmit (strict)
 | الإدارة | حماية الصفحات، منع تصعيد الصلاحيات، تدقيق التعليق والتسويات | Next.js + Playwright |
 | الأمان | قائمة ASVS/MASVS مختارة وتشغيلها يدويًا ثم آليًا | |
 
+## معروفة Blockees (حالات متوقفة)
+
+### Blockee: اختبار HTTP Integration عبر Supertest ضد PostgreSQL فعّالة
+
+**السبب:** ملف `apps/api/src/prisma/schema.prisma` يستخدم سمة `@field("اسم_العمود")` لربط أسماء حقول Prisma (camelCase) بأسماء أعمدة PostgreSQL (snake_case).
+
+**المشكلة:** Prisma لا تدعم سمة `@field` على الإطلاق (اسم الحقل هو اسم العمود). 때문에 `prisma generate` يفشل بـ 262 خطأ من نوع "Attribute not known: @field" على إصدارات Prisma المتاحة (8.1.0-dev.9 و 5.22.0 تم تجريبهما).
+
+**النتيجة:** عميل Prisma Client لا يُولَّد، بالتالي لا يمكن لـ Nest application أن تتصّل بقاعدة PostgreSQL فعّالة عبر `PrismaService` في runtime (فشل عند `$connect()` / الاستيراد). هذا يمنع تشغيل اختبار HTTP Integration عبر supertest ضد DB فعّالة في الوقت الحالي.
+
+**ما يعمل رغم ذلك:**
+- typecheck strict (0 خطأ)
+- البناء (build ناجح)
+- اختبارات النطاق النقي (35/35 ناجح)
+- الترحيلات SQL (0001/0002) مطبقة على قواعد mishwar و mishwar_test عبر Docker
+- البذر المرجعي مكتمل
+
+**الحل المقترح:** إعادة كتابة `schema.prisma` بأسماء حقول مطابقة لأسماء الأعمدة (snake_case) بدون `@field`، أو اعتماد pg مباشرة في طبقة الوصول للبيانات للخدمات التي تحتاجها ضد DB فعّالة.
+
+**alternative المختارة للمرحلة الحالية:** اختبار التزامن على SQL الخام عبر pg مباشرة ضد mishwar_test (بدون Nest/Prisma)، واختبارات وحدة للخدمات مع mock لـ PrismaService.
+
 ## CI (مخطط)
 
 مهام: lint (ESLint/Prettier) ← typecheck ← `test:domain` ← ترحيلات على PostGIS ← Jest/Supertest ← Flutter analyze/test ← Playwright. لا دمج دون نجاح الكل.

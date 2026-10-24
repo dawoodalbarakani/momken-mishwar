@@ -1,0 +1,587 @@
+// Mishwar Yemen — Prisma schema (source: database/migrations/0001_init_schema.sql + 0002)
+// ADR-0002: SQL-first. This file mirrors the migrated schema; geography columns are
+// declared as Unsupported("geography") and are accessed via $queryRaw. FOR UPDATE
+// locks are issued inside $transaction in the services.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Currencies {
+  code            String   @id @db.Char(3)
+  minorUnitDigits Int      @db.SmallInt
+  isActive        Boolean  @default(true)
+  rides           Ride[]
+  paymentRecords  PaymentRecord[]
+  driverPayouts   DriverPayout[]
+  driverLedger    DriverLedgerEntry[]
+
+  @@map("currencies")
+}
+
+model ServiceAreas {
+  id            String    @id @default(uuid()) @db.Uuid
+  code          String    @unique @db.Text
+  nameAr        String    @field("name_ar") @db.Text
+  nameEn        String    @field("name_en") @db.Text
+  boundary      Unsupported("geography")
+  timezone      String    @db.Text
+  currencyCode  String    @field("currency_code") @db.Text
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @field("created_at") @db.Timestamptz @default(now())
+  updatedAt     DateTime  @field("updated_at") @db.Timestamptz @default(now())
+  rides         Ride[]
+  dispatchSetting DispatchSettings?
+  pricingRules  PricingRule[]
+
+  @@map("service_areas")
+}
+
+model DispatchSettings {
+  serviceArea          ServiceAreas  @relation(fields: [serviceAreaId], references: [id])
+  serviceAreaId        String        @field("service_area_id") @db.Uuid @unique
+  searchRadiusM        Int           @field("search_radius_m") @db.Integer
+  maxCandidates        Int           @field("max_candidates") @db.SmallInt
+  offerBatchSize       Int           @field("offer_batch_size") @db.SmallInt
+  offerTtlSeconds      Int           @field("offer_ttl_seconds") @db.SmallInt
+  searchTimeoutSeconds Int           @field("search_timeout_seconds") @db.Integer
+  locationMaxAgeSeconds Int          @field("location_max_age_seconds") @db.Integer
+  startCodeTtlMinutes  Int           @field("start_code_ttl_minutes") @db.SmallInt
+  startCodeMaxAttempts Int           @field("start_code_max_attempts") @db.SmallInt
+  updatedAt            DateTime     @field("updated_at") @db.Timestamptz @default(now())
+
+  @@map("dispatch_settings")
+}
+
+model VehicleTypes {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.Text
+  nameAr      String   @field("name_ar") @db.Text
+  nameEn      String   @field("name_en") @db.Text
+  capacity    Int      @db.SmallInt
+  sortOrder   Int      @field("sort_order") @db.SmallInt @default(0)
+  isActive    Boolean  @default(true)
+  vehicles    Vehicle[]
+  pricingRules PricingRule[]
+
+  @@map("vehicle_types")
+}
+
+model DocumentTypes {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.Text
+  nameAr      String   @field("name_ar") @db.Text
+  nameEn      String   @field("name_en") @db.Text
+  appliesTo   String   @field("applies_to") @db.Text
+  isRequired  Boolean  @db.Boolean
+  requiresExpiry Boolean @field("requires_expiry") @db.Boolean @default(false)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @field("sort_order") @db.SmallInt @default(0)
+
+  @@map("document_types")
+}
+
+model Users {
+  id               String       @id @default(uuid()) @db.Uuid
+  phoneE164        String?      @field("phone_e164") @unique @db.Text
+  phoneVerifiedAt  DateTime?    @field("phone_verified_at") @db.Timestamptz
+  email            String?      @unique @db.Text
+  passwordHash     String?      @field("password_hash") @db.Text
+  displayName      String?      @field("display_name") @db.Text
+  locale           String       @default("ar") @db.Text
+  status           String       @default("ACTIVE") @db.Text
+  failedLoginCount Int          @field("failed_login_count") @db.Int @default(0)
+  lockedUntil      DateTime?    @field("locked_until") @db.Timestamptz
+  lastLoginAt      DateTime?    @field("last_login_at") @db.Timestamptz
+  createdAt        DateTime     @field("created_at") @db.Timestamptz @default(now())
+  updatedAt        DateTime     @field("updated_at") @db.Timestamptz @default(now())
+  deletedAt        DateTime?    @field("deleted_at") @db.Timestamptz
+  userRoles        UserRoles[]
+  otpChallenges    OtpChallenges[]
+  refreshTokens    RefreshTokens[]
+  deviceTokens     DeviceTokens[]
+  customerProfile  CustomerProfiles?
+  driverProfile    DriverProfiles?
+  vehicles         Vehicle[]
+  driverDocuments  DriverDocuments[]
+  createdPayouts   DriverPayout[] @relation("PayoutRequestedBy")
+  reviewedPayouts  DriverPayout[] @relation("PayoutReviewedBy")
+  supportTickets   SupportTicket[] @relation("SupportTicketReporter")
+  supportTicketNotes SupportTicketNote[] @relation("SupportTicketNoteAuthor")
+  ratingsAsRater   Rating[] @relation("RatingRater")
+  ratingsAsRatee   Rating[] @relation("RatingRatee")
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model UserRoles {
+  user     Users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String  @field("user_id") @db.Uuid
+  role     String  @db.Text
+  grantedBy  String? @field("granted_by") @db.Uuid
+  grantedAt  DateTime @field("granted_at") @db.Timestamptz @default(now())
+
+  @@id([userId, role])
+  @@map("user_roles")
+}
+
+model OtpChallenges {
+  id           String   @id @default(uuid()) @db.Uuid
+  phoneE164    String   @field("phone_e164") @db.Text
+  purpose      String   @db.Text
+  codeHash     String   @field("code_hash") @db.Text
+  attempts     Int      @field("attempts") @db.SmallInt @default(0)
+  maxAttempts  Int      @field("max_attempts") @db.SmallInt
+  expiresAt    DateTime @field("expires_at") @db.Timestamptz
+  consumedAt   DateTime? @field("consumed_at") @db.Timestamptz
+  requestedIp  String?  @field("requested_ip") @db.Text
+  createdAt    DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@map("otp_challenges")
+}
+
+model RefreshTokens {
+  id           String   @id @default(uuid()) @db.Uuid
+  user         Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String   @field("user_id") @db.Uuid
+  familyId     String   @field("family_id") @db.Uuid
+  tokenHash    String   @field("token_hash") @unique @db.Text
+  deviceId     String?  @field("device_id") @db.Text
+  expiresAt    DateTime @field("expires_at") @db.Timestamptz
+  rotatedAt    DateTime? @field("rotated_at") @db.Timestamptz
+  revokedAt    DateTime? @field("revoked_at") @db.Timestamptz
+  revokedReason String? @field("revoked_reason") @db.Text
+  createdAt    DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model DeviceTokens {
+  id          String   @id @default(uuid()) @db.Uuid
+  user        Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String   @field("user_id") @db.Uuid
+  platform    String   @db.Text
+  token       String   @unique @db.Text
+  locale      String   @default("ar") @db.Text
+  lastSeenAt  DateTime @field("last_seen_at") @db.Timestamptz @default(now())
+  revokedAt   DateTime? @field("revoked_at") @db.Timestamptz
+  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@map("device_tokens")
+}
+
+model CustomerProfiles {
+  user     Users @relation(fields: [userId], references: [id])
+  userId   String @field("user_id") @db.Uuid @unique
+  createdAt DateTime @field("created_at") @db.Timestamptz @default(now())
+  savedPlaces SavedPlace[]
+  rides Ride[]
+
+  @@map("customer_profiles")
+}
+
+model SavedPlaces {
+  id          String   @id @default(uuid()) @db.Uuid
+  customer    CustomerProfiles @relation(fields: [customerId], references: [userId])
+  customerId  String   @field("customer_id") @db.Uuid
+  label       String   @db.Text
+  addressText String?  @field("address_text") @db.Text
+  location    Unsupported("geography")
+  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@map("saved_places")
+}
+
+model DriverProfiles {
+  user                    Users  @relation(fields: [userId], references: [id])
+  userId                  String @field("user_id") @db.Uuid @unique
+  fullName                String @field("full_name") @db.Text
+  serviceArea             ServiceAreas @relation(fields: [serviceAreaId], references: [id])
+  serviceAreaId           String @field("service_area_id") @db.Uuid
+  verificationStatus      String @field("verification_status") @db.Text @default("PENDING")
+  verificationReviewedBy  String? @field("verification_reviewed_by") @db.Uuid
+  verificationReviewedAt  DateTime? @field("verification_reviewed_at") @db.Timestamptz
+  verificationNote        String? @field("verification_note") @db.Text
+  suspensionReason        String? @field("suspension_reason") @db.Text
+  isOnline                Boolean @field("is_online") @default(false)
+  lastLocation            Unsupported("geography")?
+  lastLocationAt          DateTime? @field("last_location_at") @db.Timestamptz
+  lastLocationAccuracyM   Float? @field("last_location_accuracy_m") @db.Real
+  ratingAvg               Float? @field("rating_avg") @db.Decimal
+  ratingCount             Int @field("rating_count") @db.Int @default(0)
+  createdAt               DateTime @field("created_at") @db.Timestamptz @default(now())
+  updatedAt               DateTime @field("updated_at") @db.Timestamptz @default(now())
+  vehicles                Vehicle[]
+  documents               DriverDocument[]
+  ridesAsDriver           Ride[]
+
+  @@map("driver_profiles")
+}
+
+model Vehicles {
+  id            String   @id @default(uuid()) @db.Uuid
+  driver        DriverProfiles @relation(fields: [driverId], references: [userId])
+  driverId      String   @field("driver_id") @db.Uuid
+  vehicleType   VehicleTypes @relation(fields: [vehicleTypeId], references: [id])
+  vehicleTypeId String   @field("vehicle_type_id") @db.Uuid
+  plateNumber   String   @field("plate_number") @db.Text
+  make          String?  @db.Text
+  model         String?  @db.Text
+  year          Int?     @db.SmallInt
+  color         String?  @db.Text
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @field("created_at") @db.Timestamptz @default(now())
+  updatedAt     DateTime @field("updated_at") @db.Timestamptz @default(now())
+
+  @@map("vehicles")
+}
+
+model DriverDocuments {
+  id               String   @id @default(uuid()) @db.Uuid
+  driver           DriverProfiles @relation(fields: [driverId], references: [userId])
+  driverId         String   @field("driver_id") @db.Uuid
+  vehicle          Vehicles? @relation(fields: [vehicleId], references: [id])
+  vehicleId        String?  @field("vehicle_id") @db.Uuid
+  documentType     DocumentTypes @relation(fields: [documentTypeId], references: [id])
+  documentTypeId   String   @field("document_type_id") @db.Uuid
+  storageKey       String   @field("storage_key") @db.Text @unique
+  mimeType         String   @field("mime_type") @db.Text
+  status           String   @default("PENDING") @db.Text
+  expiresOn        DateTime? @field("expires_on") @db.Date
+  reviewedBy       String?  @field("reviewed_by") @db.Uuid
+  reviewedAt       DateTime? @field("reviewed_at") @db.Timestamptz
+  rejectionReason  String?  @field("rejection_reason") @db.Text
+  createdAt        DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@map("driver_documents")
+}
+
+model PricingRules {
+  id               String   @id @default(uuid()) @db.Uuid
+  serviceArea      ServiceAreas @relation(fields: [serviceAreaId], references: [id])
+  serviceAreaId    String   @field("service_area_id") @db.Uuid
+  vehicleType      VehicleTypes @relation(fields: [vehicleTypeId], references: [id])
+  vehicleTypeId    String   @field("vehicle_type_id") @db.Uuid
+  version          Int      @db.Int
+  mode             String   @db.Text
+  currencyCode     String   @field("currency_code") @db.Text
+  baseFare         Decimal  @field("base_fare") @db.Decimal(18,2)
+  perKm            Decimal  @field("per_km") @db.Decimal(18,2)
+  perMinute        Decimal  @field("per_minute") @db.Decimal(18,2)
+  minimumFare      Decimal  @field("minimum_fare") @db.Decimal(18,2)
+  surcharges       Json     @db.Jsonb @default("[]")
+  commissionBps    Int      @field("commission_bps") @db.Int
+  roundingStep     Decimal  @field("rounding_step") @db.Decimal(18,2) @default(1)
+  status           String   @default("DRAFT") @db.Text
+  effectiveFrom    DateTime? @field("effective_from") @db.Timestamptz
+  effectiveTo      DateTime? @field("effective_to") @db.Timestamptz
+  createdBy        String   @field("created_by") @db.Uuid
+  publishedBy      String?  @field("published_by") @db.Uuid
+  createdAt        DateTime @field("created_at") @db.Timestamptz @default(now())
+  fixedRoutes      FixedRoute[]
+  rides            Ride[]
+
+  @@unique([serviceAreaId, vehicleTypeId, version])
+  @@map("pricing_rules")
+}
+
+model FixedRoutes {
+  id                String   @id @default(uuid()) @db.Uuid
+  pricingRule       PricingRules @relation(fields: [pricingRuleId], references: [id])
+  pricingRuleId     String   @field("pricing_rule_id") @db.Uuid
+  nameAr            String   @field("name_ar") @db.Text
+  nameEn            String?  @field("name_en") @db.Text
+  originZone        Unsupported("geography")
+  destinationZone   Unsupported("geography")
+  fare              Decimal  @db.Decimal(18,2)
+  createdAt         DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@map("fixed_routes")
+}
+
+model Rides {
+  id                      String   @id @default(uuid()) @db.Uuid
+  rideNumber              Int      @field("ride_number") @unique @default(autoincrement()) @db.BigInt
+  customer                CustomerProfiles @relation(fields: [customerId], references: [userId])
+  customerId              String   @field("customer_id") @db.Uuid
+  driver                  DriverProfiles? @relation(fields: [driverId], references: [userId])
+  driverId                String?  @field("driver_id") @db.Uuid
+  vehicle                 Vehicles? @relation(fields: [vehicleId], references: [id])
+  vehicleId               String?  @field("vehicle_id") @db.Uuid
+  serviceArea             ServiceAreas @relation(fields: [serviceAreaId], references: [id])
+  serviceAreaId           String   @field("service_area_id") @db.Uuid
+  vehicleType             VehicleTypes @relation(fields: [vehicleTypeId], references: [id])
+  vehicleTypeId           String   @field("vehicle_type_id") @db.Uuid
+  status                  String   @db.Text
+  pickup                  Unsupported("geography")
+  pickupAddress           String?  @field("pickup_address") @db.Text
+  destination             Unsupported("geography")
+  destinationAddress      String?  @field("destination_address") @db.Text
+  paymentMethod           String   @default("CASH") @db.Text
+  currencyCode            String   @field("currency_code") @db.Text
+  pricingRule             PricingRules @relation(fields: [pricingRuleId], references: [id])
+  pricingRuleId           String   @field("pricing_rule_id") @db.Uuid
+  pricingRuleVersion      Int      @field("pricing_rule_version") @db.Int
+  priceBreakdown          Json     @field("price_breakdown") @db.Jsonb
+  quotedTotal             Decimal  @field("quoted_total") @db.Decimal(18,2)
+  finalTotal              Decimal? @field("final_total") @db.Decimal(18,2)
+  commissionAmount        Decimal? @field("commission_amount") @db.Decimal(18,2)
+  driverNet               Decimal? @field("driver_net") @db.Decimal(18,2)
+  estimatedDistanceM      Int      @field("estimated_distance_m") @db.Int
+  estimatedDurationS      Int      @field("estimated_duration_s") @db.Int
+  actualDistanceM         Int?     @field("actual_distance_m") @db.Int
+  actualDurationS         Int?     @field("actual_duration_s") @db.Int
+  startCodeNonce          Bytes?   @field("start_code_nonce") @db.Bytea
+  startCodeExpiresAt      DateTime? @field("start_code_expires_at") @db.Timestamptz
+  startCodeAttempts       Int      @field("start_code_attempts") @db.SmallInt @default(0)
+  searchExpiresAt         DateTime @field("search_expires_at") @db.Timestamptz
+  cancelledByRole         String?  @field("cancelled_by_role") @db.Text
+  cancelledByUserId       String?  @field("cancelled_by_user_id") @db.Uuid
+  cancelReasonCode        String?  @field("cancel_reason_code") @db.Text
+  cancelNote              String?  @field("cancel_note") @db.Text
+  requestedAt             DateTime @field("requested_at") @db.Timestamptz @default(now())
+  assignedAt              DateTime? @field("assigned_at") @db.Timestamptz
+  arrivedAt               DateTime? @field("arrived_at") @db.Timestamptz
+  startedAt               DateTime? @field("started_at") @db.Timestamptz
+  completedAt             DateTime? @field("completed_at") @db.Timestamptz
+  cancelledAt             DateTime? @field("cancelled_at") @db.Timestamptz
+  version                 Int      @default(0) @db.Int
+  createdAt               DateTime @field("created_at") @db.Timestamptz @default(now())
+  updatedAt               DateTime @field("updated_at") @db.Timestamptz @default(now())
+  rideEvents              RideEvent[]
+  rideOffers              RideOffer[]
+  paymentRecord           PaymentRecord?
+  driverLedgerEntries     DriverLedgerEntry[]
+
+  @@map("rides")
+}
+
+model RideEvents {
+  id             Int      @id @default(autoincrement()) @db.BigInt
+  ride           Rides    @relation(fields: [rideId], references: [id])
+  rideId         String   @field("ride_id") @db.Uuid
+  eventType      String   @field("event_type") @db.Text
+  fromStatus     String?  @field("from_status") @db.Text
+  toStatus       String?  @field("to_status") @db.Text
+  actorRole      String   @field("actor_role") @db.Text
+  actorUserId    String?  @field("actor_user_id") @db.Uuid
+  clientEventId  String?  @field("client_event_id") @db.Uuid
+  payload        Json     @default("{}") @db.Jsonb
+  occurredAt     DateTime @field("occurred_at") @db.Timestamptz @default(now())
+
+  @@map("ride_events")
+}
+
+model RideOffers {
+  id                      String   @id @default(uuid()) @db.Uuid
+  ride                    Rides    @relation(fields: [rideId], references: [id])
+  rideId                  String   @field("ride_id") @db.Uuid
+  driver                  DriverProfiles @relation(fields: [driverId], references: [userId])
+  driverId                String   @field("driver_id") @db.Uuid
+  status                  String   @default("PENDING") @db.Text
+  roundNo                 Int      @field("round_no") @db.SmallInt
+  distanceToPickupM       Int?     @field("distance_to_pickup_m") @db.Int
+  etaSecondsEstimate      Int?     @field("eta_seconds_estimate") @db.Int
+  driverLocationAgeS      Int?     @field("driver_location_age_s") @db.Int
+  offeredAt               DateTime @field("offered_at") @db.Timestamptz @default(now())
+  expiresAt               DateTime @field("expires_at") @db.Timestamptz
+  respondedAt             DateTime? @field("responded_at") @db.Timestamptz
+
+  @@unique([rideId, driverId])
+  @@map("ride_offers")
+}
+
+model DriverLocationUpdates {
+  id          Int      @id @default(autoincrement()) @db.BigInt
+  driver      DriverProfiles @relation(fields: [driverId], references: [userId])
+  driverId    String   @field("driver_id") @db.Uuid
+  ride        Rides?   @relation(fields: [rideId], references: [id])
+  rideId      String?  @field("ride_id") @db.Uuid
+  location    Unsupported("geography")
+  accuracyM   Float?   @field("accuracy_m") @db.Real
+  speedMps    Float?   @field("speed_mps") @db.Real
+  headingDeg  Float?   @field("heading_deg") @db.Real
+  recordedAt  DateTime @field("recorded_at") @db.Timestamptz
+  receivedAt  DateTime @field("received_at") @db.Timestamptz @default(now())
+
+  @@map("driver_location_updates")
+}
+
+model PaymentRecords {
+  id               String   @id @default(uuid()) @db.Uuid
+  ride             Rides    @relation(fields: [rideId], references: [id])
+  rideId           String   @field("ride_id") @db.Uuid @unique
+  method           String   @db.Text
+  status           String   @default("PENDING") @db.Text
+  amount           Decimal  @db.Decimal(18,2)
+  currencyCode     String   @field("currency_code") @db.Text
+  provider         String?  @db.Text
+  providerReference String? @field("provider_reference") @db.Text
+  collectedAt      DateTime? @field("collected_at") @db.Timestamptz
+  reconciledBy     String?  @field("reconciled_by") @db.Uuid
+  reconciledAt     DateTime? @field("reconciled_at") @db.Timestamptz
+  createdAt        DateTime @field("created_at") @db.Timestamptz @default(now())
+  updatedAt        DateTime @field("updated_at") @db.Timestamptz @default(now())
+
+  @@map("payment_records")
+}
+
+model DriverPayouts {
+  id             String   @id @default(uuid()) @db.Uuid
+  driver         DriverProfiles @relation(fields: [driverId], references: [userId])
+  driverId       String   @field("driver_id") @db.Uuid
+  direction      String   @db.Text
+  amount         Decimal  @db.Decimal(18,2)
+  currencyCode   String   @field("currency_code") @db.Text
+  status         String   @default("PENDING") @db.Text
+  method         String?  @db.Text
+  reference      String?  @db.Text
+  note           String?  @db.Text
+  requestedBy    Users    @relation("PayoutRequestedBy", fields: [requestedById], references: [id])
+  requestedById  String   @field("requested_by") @db.Uuid
+  reviewedBy     Users?   @relation("PayoutReviewedBy", fields: [reviewedById], references: [id])
+  reviewedById   String?  @field("reviewed_by") @db.Uuid
+  reviewedAt     DateTime? @field("reviewed_at") @db.Timestamptz
+  createdAt      DateTime @field("created_at") @db.Timestamptz @default(now())
+  updatedAt      DateTime @field("updated_at") @db.Timestamptz @default(now())
+
+  @@map("driver_payouts")
+}
+
+model DriverLedgerEntries {
+  id                Int      @id @default(autoincrement()) @db.BigInt
+  driver            DriverProfiles @relation(fields: [driverId], references: [userId])
+  driverId          String   @field("driver_id") @db.Uuid
+  ride              Rides?   @relation(fields: [rideId], references: [id])
+  rideId            String?  @field("ride_id") @db.Uuid
+  payout            DriverPayouts? @relation(fields: [payoutId], references: [id])
+  payoutId          String?  @field("payout_id") @db.Uuid
+  entryType         String   @field("entry_type") @db.Text
+  amount            Decimal  @db.Decimal(18,2)
+  currencyCode      String   @field("currency_code") @db.Text
+  idempotencyKey    String   @field("idempotency_key") @db.Text @unique
+  reversesEntryId   Int?     @field("reverses_entry_id") @db.BigInt @unique
+  memo              String?  @db.Text
+  createdBy         String?  @field("created_by") @db.Uuid
+  createdAt         DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@map("driver_ledger_entries")
+}
+
+model Ratings {
+  id          String   @id @default(uuid()) @db.Uuid
+  ride        Rides    @relation(fields: [rideId], references: [id])
+  rideId      String   @field("ride_id") @db.Uuid
+  rater       Users    @relation("RatingRater", fields: [raterId], references: [id])
+  raterId     String   @field("rater_id") @db.Uuid
+  ratee       Users    @relation("RatingRatee", fields: [rateeId], references: [id])
+  rateeId     String   @field("ratee_id") @db.Uuid
+  raterRole   String   @field("rater_role") @db.Text
+  score       Int      @db.SmallInt
+  comment     String?  @db.Text
+  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@unique([rideId, raterRole])
+  @@map("ratings")
+}
+
+model SupportTickets {
+  id          String   @id @default(uuid()) @db.Uuid
+  ticketNumber Int     @field("ticket_number") @unique @default(autoincrement()) @db.BigInt
+  ride        Rides?   @relation(fields: [rideId], references: [id])
+  rideId      String?  @field("ride_id") @db.Uuid
+  reporter    Users    @relation("SupportTicketReporter", fields: [reporterId], references: [id])
+  reporterId  String   @field("reporter_id") @db.Uuid
+  category    String   @db.Text
+  status      String   @default("OPEN") @db.Text
+  subject     String   @db.Text
+  description String   @db.Text
+  assignedTo  String?  @field("assigned_to") @db.Uuid
+  resolvedAt  DateTime? @field("resolved_at") @db.Timestamptz
+  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
+  updatedAt   DateTime @field("updated_at") @db.Timestamptz @default(now())
+  notes       SupportTicketNote[]
+
+  @@map("support_tickets")
+}
+
+model SupportTicketNotes {
+  id        String   @id @default(uuid()) @db.Uuid
+  ticket    SupportTickets @relation(fields: [ticketId], references: [id])
+  ticketId  String   @field("ticket_id") @db.Uuid
+  author    Users    @relation("SupportTicketNoteAuthor", fields: [authorId], references: [id])
+  authorId  String   @field("author_id") @db.Uuid
+  body      String   @db.Text
+  isInternal Boolean @field("is_internal") @default(true) @db.Boolean
+  createdAt DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@map("support_ticket_notes")
+}
+
+model Notifications {
+  id          String   @id @default(uuid()) @db.Uuid
+  user        Users    @relation(fields: [userId], references: [id])
+  userId      String   @field("user_id") @db.Uuid
+  kind        String   @db.Text
+  title       String   @db.Text
+  body        String   @db.Text
+  data        Json     @default("{}") @db.Jsonb
+  dedupeKey   String?  @field("dedupe_key") @db.Text
+  pushStatus  String   @field("push_status") @db.Text @default("NOT_REQUESTED")
+  pushAttempts Int     @field("push_attempts") @db.SmallInt @default(0)
+  readAt      DateTime? @field("read_at") @db.Timestamptz
+  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@map("notifications")
+}
+
+model AuditLogs {
+  id          Int      @id @default(autoincrement()) @db.BigInt
+  actorUserId   String? @field("actor_user_id") @db.Uuid
+  actorRole     String? @field("actor_role") @db.Text
+  action      String   @db.Text
+  entityType  String   @field("entity_type") @db.Text
+  entityId    String?  @field("entity_id") @db.Text
+  beforeState Json?    @field("before_state") @db.Jsonb
+  afterState  Json?    @field("after_state") @db.Jsonb
+  reason      String?  @db.Text
+  ip          String?  @db.Text
+  userAgent   String?  @field("user_agent") @db.Text
+  requestId   String?  @field("request_id") @db.Text
+  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
+
+  @@map("audit_logs")
+}
+
+model IdempotencyKeys {
+  id              String   @id @default(uuid()) @db.Uuid
+  user            Users    @relation(fields: [userId], references: [id])
+  userId          String   @field("user_id") @db.Uuid
+  scope           String   @db.Text
+  idempotencyKey  String   @field("idempotency_key") @db.Text
+  requestHash     String   @field("request_hash") @db.Text
+  state           String   @default("IN_PROGRESS") @db.Text
+  responseStatus  Int?     @field("response_status") @db.Int
+  responseBody    Json?    @field("response_body") @db.Jsonb
+  resourceType    String?  @field("resource_type") @db.Text
+  resourceId      String?  @field("resource_id") @db.Uuid
+  createdAt       DateTime @field("created_at") @db.Timestamptz @default(now())
+  expiresAt       DateTime @field("expires_at") @db.Timestamptz
+
+  @@unique([userId, scope, idempotencyKey])
+  @@map("idempotency_keys")
+}
+
+model SchemaMigrations {
+  version    String @db.Text
+  description String @db.Text
+
+  @@id([version])
+  @@map("schema_migrations")
+}

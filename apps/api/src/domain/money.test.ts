@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MoneyError, add, mulDivRound, money, roundToStep, sub } from './money';
+import { MoneyError, add, mulDivRound, money, roundToStep, sub } from './money.js';
 
 test('mulDivRound rounds half up and survives large products', () => {
   assert.equal(mulDivRound(5, 1, 2), 3); // 2.5 -> 3

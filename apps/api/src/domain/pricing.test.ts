@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PricingError, PricingRule, computePrice } from './pricing';
+import { PricingError, PricingRule, computePrice } from './pricing.js';
 
 // TEST FIXTURE ONLY. These numbers are NOT market data for Yemen.
 const rule: PricingRule = {

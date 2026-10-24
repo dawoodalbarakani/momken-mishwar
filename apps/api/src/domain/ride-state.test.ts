@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Actor, RideSnapshot, RideTransitionError, transition } from './ride-state';
+import { Actor, RideSnapshot, RideTransitionError, transition } from './ride-state.js';
 
 const customer: Actor = { role: 'CUSTOMER', userId: 'cust-1' };
 const driver: Actor = { role: 'DRIVER', userId: 'drv-1' };
