@@ -1,8 +1,3 @@
-// Mishwar Yemen — Prisma schema (source: database/migrations/0001_init_schema.sql + 0002)
-// ADR-0002: SQL-first. This file mirrors the migrated schema; geography columns are
-// declared as Unsupported("geography") and are accessed via $queryRaw. FOR UPDATE
-// locks are issued inside $transaction in the services.
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,576 +7,643 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Currencies {
-  code            String   @id @db.Char(3)
-  minorUnitDigits Int      @db.SmallInt
-  isActive        Boolean  @default(true)
-  rides           Ride[]
-  paymentRecords  PaymentRecord[]
-  driverPayouts   DriverPayout[]
-  driverLedger    DriverLedgerEntry[]
+model audit_logs {
+  id            BigInt   @id @default(autoincrement())
+  actor_user_id String?  @db.Uuid
+  actor_role    String?
+  action        String
+  entity_type   String
+  entity_id     String?
+  before_state  Json?
+  after_state   Json?
+  reason        String?
+  ip            String?  @db.Inet
+  user_agent    String?
+  request_id    String?
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  users         users?   @relation(fields: [actor_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("currencies")
+  @@index([action, created_at(sort: Desc)], map: "audit_logs_action_idx")
+  @@index([actor_user_id, created_at(sort: Desc)], map: "audit_logs_actor_idx")
+  @@index([entity_type, entity_id, created_at(sort: Desc)], map: "audit_logs_entity_idx")
 }
 
-model ServiceAreas {
-  id            String    @id @default(uuid()) @db.Uuid
-  code          String    @unique @db.Text
-  nameAr        String    @field("name_ar") @db.Text
-  nameEn        String    @field("name_en") @db.Text
-  boundary      Unsupported("geography")
-  timezone      String    @db.Text
-  currencyCode  String    @field("currency_code") @db.Text
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @field("created_at") @db.Timestamptz @default(now())
-  updatedAt     DateTime  @field("updated_at") @db.Timestamptz @default(now())
-  rides         Ride[]
-  dispatchSetting DispatchSettings?
-  pricingRules  PricingRule[]
-
-  @@map("service_areas")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model currencies {
+  code                  String                  @id
+  minor_unit_digits     Int                     @db.SmallInt
+  is_active             Boolean                 @default(true)
+  driver_ledger_entries driver_ledger_entries[]
+  driver_payouts        driver_payouts[]
+  payment_records       payment_records[]
+  pricing_rules         pricing_rules[]
+  rides                 rides[]
+  service_areas         service_areas[]
 }
 
-model DispatchSettings {
-  serviceArea          ServiceAreas  @relation(fields: [serviceAreaId], references: [id])
-  serviceAreaId        String        @field("service_area_id") @db.Uuid @unique
-  searchRadiusM        Int           @field("search_radius_m") @db.Integer
-  maxCandidates        Int           @field("max_candidates") @db.SmallInt
-  offerBatchSize       Int           @field("offer_batch_size") @db.SmallInt
-  offerTtlSeconds      Int           @field("offer_ttl_seconds") @db.SmallInt
-  searchTimeoutSeconds Int           @field("search_timeout_seconds") @db.Integer
-  locationMaxAgeSeconds Int          @field("location_max_age_seconds") @db.Integer
-  startCodeTtlMinutes  Int           @field("start_code_ttl_minutes") @db.SmallInt
-  startCodeMaxAttempts Int           @field("start_code_max_attempts") @db.SmallInt
-  updatedAt            DateTime     @field("updated_at") @db.Timestamptz @default(now())
-
-  @@map("dispatch_settings")
+model customer_profiles {
+  user_id      String         @id @db.Uuid
+  created_at   DateTime       @default(now()) @db.Timestamptz(6)
+  users        users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rides        rides[]
+  saved_places saved_places[]
 }
 
-model VehicleTypes {
-  id          String   @id @default(uuid()) @db.Uuid
-  code        String   @unique @db.Text
-  nameAr      String   @field("name_ar") @db.Text
-  nameEn      String   @field("name_en") @db.Text
-  capacity    Int      @db.SmallInt
-  sortOrder   Int      @field("sort_order") @db.SmallInt @default(0)
-  isActive    Boolean  @default(true)
-  vehicles    Vehicle[]
-  pricingRules PricingRule[]
-
-  @@map("vehicle_types")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model device_tokens {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String    @db.Uuid
+  platform     String
+  token        String    @unique
+  locale       String    @default("ar")
+  last_seen_at DateTime  @default(now()) @db.Timestamptz(6)
+  revoked_at   DateTime? @db.Timestamptz(6)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-model DocumentTypes {
-  id          String   @id @default(uuid()) @db.Uuid
-  code        String   @unique @db.Text
-  nameAr      String   @field("name_ar") @db.Text
-  nameEn      String   @field("name_en") @db.Text
-  appliesTo   String   @field("applies_to") @db.Text
-  isRequired  Boolean  @db.Boolean
-  requiresExpiry Boolean @field("requires_expiry") @db.Boolean @default(false)
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @field("sort_order") @db.SmallInt @default(0)
-
-  @@map("document_types")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model dispatch_settings {
+  service_area_id          String        @id @db.Uuid
+  search_radius_m          Int
+  max_candidates           Int           @db.SmallInt
+  offer_batch_size         Int           @db.SmallInt
+  offer_ttl_seconds        Int           @db.SmallInt
+  search_timeout_seconds   Int
+  location_max_age_seconds Int
+  start_code_ttl_minutes   Int           @db.SmallInt
+  start_code_max_attempts  Int           @db.SmallInt
+  updated_at               DateTime      @default(now()) @db.Timestamptz(6)
+  service_areas            service_areas @relation(fields: [service_area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-model Users {
-  id               String       @id @default(uuid()) @db.Uuid
-  phoneE164        String?      @field("phone_e164") @unique @db.Text
-  phoneVerifiedAt  DateTime?    @field("phone_verified_at") @db.Timestamptz
-  email            String?      @unique @db.Text
-  passwordHash     String?      @field("password_hash") @db.Text
-  displayName      String?      @field("display_name") @db.Text
-  locale           String       @default("ar") @db.Text
-  status           String       @default("ACTIVE") @db.Text
-  failedLoginCount Int          @field("failed_login_count") @db.Int @default(0)
-  lockedUntil      DateTime?    @field("locked_until") @db.Timestamptz
-  lastLoginAt      DateTime?    @field("last_login_at") @db.Timestamptz
-  createdAt        DateTime     @field("created_at") @db.Timestamptz @default(now())
-  updatedAt        DateTime     @field("updated_at") @db.Timestamptz @default(now())
-  deletedAt        DateTime?    @field("deleted_at") @db.Timestamptz
-  userRoles        UserRoles[]
-  otpChallenges    OtpChallenges[]
-  refreshTokens    RefreshTokens[]
-  deviceTokens     DeviceTokens[]
-  customerProfile  CustomerProfiles?
-  driverProfile    DriverProfiles?
-  vehicles         Vehicle[]
-  driverDocuments  DriverDocuments[]
-  createdPayouts   DriverPayout[] @relation("PayoutRequestedBy")
-  reviewedPayouts  DriverPayout[] @relation("PayoutReviewedBy")
-  supportTickets   SupportTicket[] @relation("SupportTicketReporter")
-  supportTicketNotes SupportTicketNote[] @relation("SupportTicketNoteAuthor")
-  ratingsAsRater   Rating[] @relation("RatingRater")
-  ratingsAsRatee   Rating[] @relation("RatingRatee")
-  auditLogs        AuditLog[]
-
-  @@map("users")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model document_types {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String             @unique
+  name_ar          String
+  name_en          String
+  applies_to       String
+  is_required      Boolean
+  requires_expiry  Boolean            @default(false)
+  is_active        Boolean            @default(true)
+  sort_order       Int                @default(0) @db.SmallInt
+  driver_documents driver_documents[]
 }
 
-model UserRoles {
-  user     Users   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId   String  @field("user_id") @db.Uuid
-  role     String  @db.Text
-  grantedBy  String? @field("granted_by") @db.Uuid
-  grantedAt  DateTime @field("granted_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model driver_documents {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  driver_id        String          @db.Uuid
+  vehicle_id       String?         @db.Uuid
+  document_type_id String          @db.Uuid
+  storage_key      String          @unique
+  mime_type        String
+  status           String          @default("PENDING")
+  expires_on       DateTime?       @db.Date
+  reviewed_by      String?         @db.Uuid
+  reviewed_at      DateTime?       @db.Timestamptz(6)
+  rejection_reason String?
+  created_at       DateTime        @default(now()) @db.Timestamptz(6)
+  document_types   document_types  @relation(fields: [document_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  driver_profiles  driver_profiles @relation(fields: [driver_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  users            users?          @relation(fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehicles         vehicles?       @relation(fields: [vehicle_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@id([userId, role])
-  @@map("user_roles")
+  @@index([driver_id, document_type_id], map: "driver_documents_driver_idx")
 }
 
-model OtpChallenges {
-  id           String   @id @default(uuid()) @db.Uuid
-  phoneE164    String   @field("phone_e164") @db.Text
-  purpose      String   @db.Text
-  codeHash     String   @field("code_hash") @db.Text
-  attempts     Int      @field("attempts") @db.SmallInt @default(0)
-  maxAttempts  Int      @field("max_attempts") @db.SmallInt
-  expiresAt    DateTime @field("expires_at") @db.Timestamptz
-  consumedAt   DateTime? @field("consumed_at") @db.Timestamptz
-  requestedIp  String?  @field("requested_ip") @db.Text
-  createdAt    DateTime @field("created_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model driver_ledger_entries {
+  id                          BigInt                 @id @default(autoincrement())
+  driver_id                   String                 @db.Uuid
+  ride_id                     String?                @db.Uuid
+  payout_id                   String?                @db.Uuid
+  entry_type                  String
+  amount                      Decimal                @db.Decimal(18, 2)
+  currency_code               String
+  idempotency_key             String                 @unique
+  reverses_entry_id           BigInt?                @unique
+  memo                        String?
+  created_by                  String?                @db.Uuid
+  created_at                  DateTime               @default(now()) @db.Timestamptz(6)
+  users                       users?                 @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currencies                  currencies             @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  driver_profiles             driver_profiles        @relation(fields: [driver_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  driver_payouts              driver_payouts?        @relation(fields: [payout_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  driver_ledger_entries       driver_ledger_entries? @relation("driver_ledger_entriesTodriver_ledger_entries", fields: [reverses_entry_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_driver_ledger_entries driver_ledger_entries? @relation("driver_ledger_entriesTodriver_ledger_entries")
+  rides                       rides?                 @relation(fields: [ride_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("otp_challenges")
+  @@index([driver_id, created_at], map: "driver_ledger_driver_idx")
 }
 
-model RefreshTokens {
-  id           String   @id @default(uuid()) @db.Uuid
-  user         Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId       String   @field("user_id") @db.Uuid
-  familyId     String   @field("family_id") @db.Uuid
-  tokenHash    String   @field("token_hash") @unique @db.Text
-  deviceId     String?  @field("device_id") @db.Text
-  expiresAt    DateTime @field("expires_at") @db.Timestamptz
-  rotatedAt    DateTime? @field("rotated_at") @db.Timestamptz
-  revokedAt    DateTime? @field("revoked_at") @db.Timestamptz
-  revokedReason String? @field("revoked_reason") @db.Text
-  createdAt    DateTime @field("created_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model driver_location_updates {
+  id              BigInt                   @id @default(autoincrement())
+  driver_id       String                   @db.Uuid
+  ride_id         String?                  @db.Uuid
+  location        Unsupported("geography")
+  accuracy_m      Float?                   @db.Real
+  speed_mps       Float?                   @db.Real
+  heading_deg     Float?                   @db.Real
+  recorded_at     DateTime                 @db.Timestamptz(6)
+  received_at     DateTime                 @default(now()) @db.Timestamptz(6)
+  driver_profiles driver_profiles          @relation(fields: [driver_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  rides           rides?                   @relation(fields: [ride_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("refresh_tokens")
+  @@index([driver_id, recorded_at(sort: Desc)], map: "driver_location_updates_driver_time_idx")
+  @@index([recorded_at], map: "driver_location_updates_recorded_brin", type: Brin)
 }
 
-model DeviceTokens {
-  id          String   @id @default(uuid()) @db.Uuid
-  user        Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String   @field("user_id") @db.Uuid
-  platform    String   @db.Text
-  token       String   @unique @db.Text
-  locale      String   @default("ar") @db.Text
-  lastSeenAt  DateTime @field("last_seen_at") @db.Timestamptz @default(now())
-  revokedAt   DateTime? @field("revoked_at") @db.Timestamptz
-  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model driver_payouts {
+  id                                       String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  driver_id                                String                  @db.Uuid
+  direction                                String
+  amount                                   Decimal                 @db.Decimal(18, 2)
+  currency_code                            String
+  status                                   String                  @default("PENDING")
+  method                                   String?
+  reference                                String?
+  note                                     String?
+  requested_by                             String                  @db.Uuid
+  reviewed_by                              String?                 @db.Uuid
+  reviewed_at                              DateTime?               @db.Timestamptz(6)
+  created_at                               DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime                @default(now()) @db.Timestamptz(6)
+  driver_ledger_entries                    driver_ledger_entries[]
+  currencies                               currencies              @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  driver_profiles                          driver_profiles         @relation(fields: [driver_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  users_driver_payouts_requested_byTousers users                   @relation("driver_payouts_requested_byTousers", fields: [requested_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_driver_payouts_reviewed_byTousers  users?                  @relation("driver_payouts_reviewed_byTousers", fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("device_tokens")
+  @@index([driver_id, created_at(sort: Desc)], map: "driver_payouts_driver_idx")
 }
 
-model CustomerProfiles {
-  user     Users @relation(fields: [userId], references: [id])
-  userId   String @field("user_id") @db.Uuid @unique
-  createdAt DateTime @field("created_at") @db.Timestamptz @default(now())
-  savedPlaces SavedPlace[]
-  rides Ride[]
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model driver_profiles {
+  user_id                                               String                    @id @db.Uuid
+  full_name                                             String
+  service_area_id                                       String                    @db.Uuid
+  verification_status                                   String                    @default("PENDING")
+  verification_reviewed_by                              String?                   @db.Uuid
+  verification_reviewed_at                              DateTime?                 @db.Timestamptz(6)
+  verification_note                                     String?
+  suspension_reason                                     String?
+  is_online                                             Boolean                   @default(false)
+  last_location                                         Unsupported("geography")?
+  last_location_at                                      DateTime?                 @db.Timestamptz(6)
+  last_location_accuracy_m                              Float?                    @db.Real
+  rating_avg                                            Decimal?                  @db.Decimal(3, 2)
+  rating_count                                          Int                       @default(0)
+  created_at                                            DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                                            DateTime                  @default(now()) @db.Timestamptz(6)
+  driver_documents                                      driver_documents[]
+  driver_ledger_entries                                 driver_ledger_entries[]
+  driver_location_updates                               driver_location_updates[]
+  driver_payouts                                        driver_payouts[]
+  service_areas                                         service_areas             @relation(fields: [service_area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_driver_profiles_user_idTousers                  users                     @relation("driver_profiles_user_idTousers", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_driver_profiles_verification_reviewed_byTousers users?                    @relation("driver_profiles_verification_reviewed_byTousers", fields: [verification_reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ride_offers                                           ride_offers[]
+  rides                                                 rides[]
+  vehicles                                              vehicles[]
 
-  @@map("customer_profiles")
+  @@index([verification_status], map: "driver_profiles_status_idx")
 }
 
-model SavedPlaces {
-  id          String   @id @default(uuid()) @db.Uuid
-  customer    CustomerProfiles @relation(fields: [customerId], references: [userId])
-  customerId  String   @field("customer_id") @db.Uuid
-  label       String   @db.Text
-  addressText String?  @field("address_text") @db.Text
-  location    Unsupported("geography")
-  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fixed_routes {
+  id               String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pricing_rule_id  String                   @db.Uuid
+  name_ar          String
+  name_en          String?
+  origin_zone      Unsupported("geography")
+  destination_zone Unsupported("geography")
+  fare             Decimal                  @db.Decimal(18, 2)
+  created_at       DateTime                 @default(now()) @db.Timestamptz(6)
+  pricing_rules    pricing_rules            @relation(fields: [pricing_rule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("saved_places")
+  @@index([destination_zone], map: "fixed_routes_dest_gix", type: Gist)
+  @@index([origin_zone], map: "fixed_routes_origin_gix", type: Gist)
+  @@index([pricing_rule_id], map: "fixed_routes_rule_idx")
 }
 
-model DriverProfiles {
-  user                    Users  @relation(fields: [userId], references: [id])
-  userId                  String @field("user_id") @db.Uuid @unique
-  fullName                String @field("full_name") @db.Text
-  serviceArea             ServiceAreas @relation(fields: [serviceAreaId], references: [id])
-  serviceAreaId           String @field("service_area_id") @db.Uuid
-  verificationStatus      String @field("verification_status") @db.Text @default("PENDING")
-  verificationReviewedBy  String? @field("verification_reviewed_by") @db.Uuid
-  verificationReviewedAt  DateTime? @field("verification_reviewed_at") @db.Timestamptz
-  verificationNote        String? @field("verification_note") @db.Text
-  suspensionReason        String? @field("suspension_reason") @db.Text
-  isOnline                Boolean @field("is_online") @default(false)
-  lastLocation            Unsupported("geography")?
-  lastLocationAt          DateTime? @field("last_location_at") @db.Timestamptz
-  lastLocationAccuracyM   Float? @field("last_location_accuracy_m") @db.Real
-  ratingAvg               Float? @field("rating_avg") @db.Decimal
-  ratingCount             Int @field("rating_count") @db.Int @default(0)
-  createdAt               DateTime @field("created_at") @db.Timestamptz @default(now())
-  updatedAt               DateTime @field("updated_at") @db.Timestamptz @default(now())
-  vehicles                Vehicle[]
-  documents               DriverDocument[]
-  ridesAsDriver           Ride[]
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model idempotency_keys {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String   @db.Uuid
+  scope           String
+  idempotency_key String
+  request_hash    String
+  state           String   @default("IN_PROGRESS")
+  response_status Int?     @db.SmallInt
+  response_body   Json?
+  resource_type   String?
+  resource_id     String?  @db.Uuid
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  expires_at      DateTime @db.Timestamptz(6)
+  users           users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("driver_profiles")
+  @@unique([user_id, scope, idempotency_key])
+  @@index([expires_at], map: "idempotency_keys_expires_idx")
 }
 
-model Vehicles {
-  id            String   @id @default(uuid()) @db.Uuid
-  driver        DriverProfiles @relation(fields: [driverId], references: [userId])
-  driverId      String   @field("driver_id") @db.Uuid
-  vehicleType   VehicleTypes @relation(fields: [vehicleTypeId], references: [id])
-  vehicleTypeId String   @field("vehicle_type_id") @db.Uuid
-  plateNumber   String   @field("plate_number") @db.Text
-  make          String?  @db.Text
-  model         String?  @db.Text
-  year          Int?     @db.SmallInt
-  color         String?  @db.Text
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @field("created_at") @db.Timestamptz @default(now())
-  updatedAt     DateTime @field("updated_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model notifications {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @db.Uuid
+  kind          String
+  title         String
+  body          String
+  data          Json      @default("{}")
+  dedupe_key    String?
+  push_status   String    @default("NOT_REQUESTED")
+  push_attempts Int       @default(0) @db.SmallInt
+  read_at       DateTime? @db.Timestamptz(6)
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("vehicles")
+  @@index([user_id, created_at(sort: Desc)], map: "notifications_user_idx")
 }
 
-model DriverDocuments {
-  id               String   @id @default(uuid()) @db.Uuid
-  driver           DriverProfiles @relation(fields: [driverId], references: [userId])
-  driverId         String   @field("driver_id") @db.Uuid
-  vehicle          Vehicles? @relation(fields: [vehicleId], references: [id])
-  vehicleId        String?  @field("vehicle_id") @db.Uuid
-  documentType     DocumentTypes @relation(fields: [documentTypeId], references: [id])
-  documentTypeId   String   @field("document_type_id") @db.Uuid
-  storageKey       String   @field("storage_key") @db.Text @unique
-  mimeType         String   @field("mime_type") @db.Text
-  status           String   @default("PENDING") @db.Text
-  expiresOn        DateTime? @field("expires_on") @db.Date
-  reviewedBy       String?  @field("reviewed_by") @db.Uuid
-  reviewedAt       DateTime? @field("reviewed_at") @db.Timestamptz
-  rejectionReason  String?  @field("rejection_reason") @db.Text
-  createdAt        DateTime @field("created_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model otp_challenges {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone_e164   String
+  purpose      String
+  code_hash    String
+  attempts     Int       @default(0) @db.SmallInt
+  max_attempts Int       @db.SmallInt
+  expires_at   DateTime  @db.Timestamptz(6)
+  consumed_at  DateTime? @db.Timestamptz(6)
+  requested_ip String?   @db.Inet
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
 
-  @@map("driver_documents")
+  @@index([phone_e164, created_at(sort: Desc)], map: "otp_challenges_phone_created_idx")
 }
 
-model PricingRules {
-  id               String   @id @default(uuid()) @db.Uuid
-  serviceArea      ServiceAreas @relation(fields: [serviceAreaId], references: [id])
-  serviceAreaId    String   @field("service_area_id") @db.Uuid
-  vehicleType      VehicleTypes @relation(fields: [vehicleTypeId], references: [id])
-  vehicleTypeId    String   @field("vehicle_type_id") @db.Uuid
-  version          Int      @db.Int
-  mode             String   @db.Text
-  currencyCode     String   @field("currency_code") @db.Text
-  baseFare         Decimal  @field("base_fare") @db.Decimal(18,2)
-  perKm            Decimal  @field("per_km") @db.Decimal(18,2)
-  perMinute        Decimal  @field("per_minute") @db.Decimal(18,2)
-  minimumFare      Decimal  @field("minimum_fare") @db.Decimal(18,2)
-  surcharges       Json     @db.Jsonb @default("[]")
-  commissionBps    Int      @field("commission_bps") @db.Int
-  roundingStep     Decimal  @field("rounding_step") @db.Decimal(18,2) @default(1)
-  status           String   @default("DRAFT") @db.Text
-  effectiveFrom    DateTime? @field("effective_from") @db.Timestamptz
-  effectiveTo      DateTime? @field("effective_to") @db.Timestamptz
-  createdBy        String   @field("created_by") @db.Uuid
-  publishedBy      String?  @field("published_by") @db.Uuid
-  createdAt        DateTime @field("created_at") @db.Timestamptz @default(now())
-  fixedRoutes      FixedRoute[]
-  rides            Ride[]
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model payment_records {
+  id                 String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ride_id            String     @unique @db.Uuid
+  method             String
+  status             String     @default("PENDING")
+  amount             Decimal    @db.Decimal(18, 2)
+  currency_code      String
+  provider           String?
+  provider_reference String?
+  collected_at       DateTime?  @db.Timestamptz(6)
+  reconciled_by      String?    @db.Uuid
+  reconciled_at      DateTime?  @db.Timestamptz(6)
+  created_at         DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime   @default(now()) @db.Timestamptz(6)
+  currencies         currencies @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  users              users?     @relation(fields: [reconciled_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rides              rides      @relation(fields: [ride_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([serviceAreaId, vehicleTypeId, version])
-  @@map("pricing_rules")
+  @@index([status, created_at], map: "payment_records_status_idx")
 }
 
-model FixedRoutes {
-  id                String   @id @default(uuid()) @db.Uuid
-  pricingRule       PricingRules @relation(fields: [pricingRuleId], references: [id])
-  pricingRuleId     String   @field("pricing_rule_id") @db.Uuid
-  nameAr            String   @field("name_ar") @db.Text
-  nameEn            String?  @field("name_en") @db.Text
-  originZone        Unsupported("geography")
-  destinationZone   Unsupported("geography")
-  fare              Decimal  @db.Decimal(18,2)
-  createdAt         DateTime @field("created_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pricing_rules {
+  id                                      String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  service_area_id                         String         @db.Uuid
+  vehicle_type_id                         String         @db.Uuid
+  version                                 Int
+  mode                                    String
+  currency_code                           String
+  base_fare                               Decimal        @db.Decimal(18, 2)
+  per_km                                  Decimal        @db.Decimal(18, 2)
+  per_minute                              Decimal        @db.Decimal(18, 2)
+  minimum_fare                            Decimal        @db.Decimal(18, 2)
+  surcharges                              Json           @default("[]")
+  commission_bps                          Int
+  rounding_step                           Decimal        @default(1) @db.Decimal(18, 2)
+  status                                  String         @default("DRAFT")
+  effective_from                          DateTime?      @db.Timestamptz(6)
+  effective_to                            DateTime?      @db.Timestamptz(6)
+  created_by                              String         @db.Uuid
+  published_by                            String?        @db.Uuid
+  created_at                              DateTime       @default(now()) @db.Timestamptz(6)
+  fixed_routes                            fixed_routes[]
+  users_pricing_rules_created_byTousers   users          @relation("pricing_rules_created_byTousers", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currencies                              currencies     @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  users_pricing_rules_published_byTousers users?         @relation("pricing_rules_published_byTousers", fields: [published_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service_areas                           service_areas  @relation(fields: [service_area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehicle_types                           vehicle_types  @relation(fields: [vehicle_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rides                                   rides[]
 
-  @@map("fixed_routes")
+  @@unique([service_area_id, vehicle_type_id, version])
 }
 
-model Rides {
-  id                      String   @id @default(uuid()) @db.Uuid
-  rideNumber              Int      @field("ride_number") @unique @default(autoincrement()) @db.BigInt
-  customer                CustomerProfiles @relation(fields: [customerId], references: [userId])
-  customerId              String   @field("customer_id") @db.Uuid
-  driver                  DriverProfiles? @relation(fields: [driverId], references: [userId])
-  driverId                String?  @field("driver_id") @db.Uuid
-  vehicle                 Vehicles? @relation(fields: [vehicleId], references: [id])
-  vehicleId               String?  @field("vehicle_id") @db.Uuid
-  serviceArea             ServiceAreas @relation(fields: [serviceAreaId], references: [id])
-  serviceAreaId           String   @field("service_area_id") @db.Uuid
-  vehicleType             VehicleTypes @relation(fields: [vehicleTypeId], references: [id])
-  vehicleTypeId           String   @field("vehicle_type_id") @db.Uuid
-  status                  String   @db.Text
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ratings {
+  id                            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ride_id                       String   @db.Uuid
+  rater_id                      String   @db.Uuid
+  ratee_id                      String   @db.Uuid
+  rater_role                    String
+  score                         Int      @db.SmallInt
+  comment                       String?
+  created_at                    DateTime @default(now()) @db.Timestamptz(6)
+  users_ratings_ratee_idTousers users    @relation("ratings_ratee_idTousers", fields: [ratee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_ratings_rater_idTousers users    @relation("ratings_rater_idTousers", fields: [rater_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rides                         rides    @relation(fields: [ride_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([ride_id, rater_role])
+  @@index([ratee_id], map: "ratings_ratee_idx")
+}
+
+model refresh_tokens {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String    @db.Uuid
+  family_id      String    @db.Uuid
+  token_hash     String    @unique
+  device_id      String?
+  expires_at     DateTime  @db.Timestamptz(6)
+  rotated_at     DateTime? @db.Timestamptz(6)
+  revoked_at     DateTime? @db.Timestamptz(6)
+  revoked_reason String?
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([family_id], map: "refresh_tokens_family_idx")
+  @@index([user_id], map: "refresh_tokens_user_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ride_events {
+  id              BigInt   @id @default(autoincrement())
+  ride_id         String   @db.Uuid
+  event_type      String
+  from_status     String?
+  to_status       String?
+  actor_role      String
+  actor_user_id   String?  @db.Uuid
+  client_event_id String?  @db.Uuid
+  payload         Json     @default("{}")
+  occurred_at     DateTime @default(now()) @db.Timestamptz(6)
+  users           users?   @relation(fields: [actor_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rides           rides    @relation(fields: [ride_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ride_id, id], map: "ride_events_ride_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ride_offers {
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ride_id               String          @db.Uuid
+  driver_id             String          @db.Uuid
+  status                String          @default("PENDING")
+  round_no              Int             @db.SmallInt
+  distance_to_pickup_m  Int?
+  eta_seconds_estimate  Int?
+  driver_location_age_s Int?
+  offered_at            DateTime        @default(now()) @db.Timestamptz(6)
+  expires_at            DateTime        @db.Timestamptz(6)
+  responded_at          DateTime?       @db.Timestamptz(6)
+  driver_profiles       driver_profiles @relation(fields: [driver_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  rides                 rides           @relation(fields: [ride_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([ride_id, driver_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model rides {
+  id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ride_number             BigInt                    @unique @default(autoincrement())
+  customer_id             String                    @db.Uuid
+  driver_id               String?                   @db.Uuid
+  vehicle_id              String?                   @db.Uuid
+  service_area_id         String                    @db.Uuid
+  vehicle_type_id         String                    @db.Uuid
+  status                  String
   pickup                  Unsupported("geography")
-  pickupAddress           String?  @field("pickup_address") @db.Text
+  pickup_address          String?
   destination             Unsupported("geography")
-  destinationAddress      String?  @field("destination_address") @db.Text
-  paymentMethod           String   @default("CASH") @db.Text
-  currencyCode            String   @field("currency_code") @db.Text
-  pricingRule             PricingRules @relation(fields: [pricingRuleId], references: [id])
-  pricingRuleId           String   @field("pricing_rule_id") @db.Uuid
-  pricingRuleVersion      Int      @field("pricing_rule_version") @db.Int
-  priceBreakdown          Json     @field("price_breakdown") @db.Jsonb
-  quotedTotal             Decimal  @field("quoted_total") @db.Decimal(18,2)
-  finalTotal              Decimal? @field("final_total") @db.Decimal(18,2)
-  commissionAmount        Decimal? @field("commission_amount") @db.Decimal(18,2)
-  driverNet               Decimal? @field("driver_net") @db.Decimal(18,2)
-  estimatedDistanceM      Int      @field("estimated_distance_m") @db.Int
-  estimatedDurationS      Int      @field("estimated_duration_s") @db.Int
-  actualDistanceM         Int?     @field("actual_distance_m") @db.Int
-  actualDurationS         Int?     @field("actual_duration_s") @db.Int
-  startCodeNonce          Bytes?   @field("start_code_nonce") @db.Bytea
-  startCodeExpiresAt      DateTime? @field("start_code_expires_at") @db.Timestamptz
-  startCodeAttempts       Int      @field("start_code_attempts") @db.SmallInt @default(0)
-  searchExpiresAt         DateTime @field("search_expires_at") @db.Timestamptz
-  cancelledByRole         String?  @field("cancelled_by_role") @db.Text
-  cancelledByUserId       String?  @field("cancelled_by_user_id") @db.Uuid
-  cancelReasonCode        String?  @field("cancel_reason_code") @db.Text
-  cancelNote              String?  @field("cancel_note") @db.Text
-  requestedAt             DateTime @field("requested_at") @db.Timestamptz @default(now())
-  assignedAt              DateTime? @field("assigned_at") @db.Timestamptz
-  arrivedAt               DateTime? @field("arrived_at") @db.Timestamptz
-  startedAt               DateTime? @field("started_at") @db.Timestamptz
-  completedAt             DateTime? @field("completed_at") @db.Timestamptz
-  cancelledAt             DateTime? @field("cancelled_at") @db.Timestamptz
-  version                 Int      @default(0) @db.Int
-  createdAt               DateTime @field("created_at") @db.Timestamptz @default(now())
-  updatedAt               DateTime @field("updated_at") @db.Timestamptz @default(now())
-  rideEvents              RideEvent[]
-  rideOffers              RideOffer[]
-  paymentRecord           PaymentRecord?
-  driverLedgerEntries     DriverLedgerEntry[]
+  destination_address     String?
+  payment_method          String                    @default("CASH")
+  currency_code           String
+  pricing_rule_id         String                    @db.Uuid
+  pricing_rule_version    Int
+  price_breakdown         Json
+  quoted_total            Decimal                   @db.Decimal(18, 2)
+  final_total             Decimal?                  @db.Decimal(18, 2)
+  commission_amount       Decimal?                  @db.Decimal(18, 2)
+  driver_net              Decimal?                  @db.Decimal(18, 2)
+  estimated_distance_m    Int
+  estimated_duration_s    Int
+  actual_distance_m       Int?
+  actual_duration_s       Int?
+  start_code_nonce        Bytes?
+  start_code_expires_at   DateTime?                 @db.Timestamptz(6)
+  start_code_attempts     Int                       @default(0) @db.SmallInt
+  search_expires_at       DateTime                  @db.Timestamptz(6)
+  cancelled_by_role       String?
+  cancelled_by_user_id    String?                   @db.Uuid
+  cancel_reason_code      String?
+  cancel_note             String?
+  requested_at            DateTime                  @default(now()) @db.Timestamptz(6)
+  assigned_at             DateTime?                 @db.Timestamptz(6)
+  arrived_at              DateTime?                 @db.Timestamptz(6)
+  started_at              DateTime?                 @db.Timestamptz(6)
+  completed_at            DateTime?                 @db.Timestamptz(6)
+  cancelled_at            DateTime?                 @db.Timestamptz(6)
+  version                 Int                       @default(0)
+  created_at              DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime                  @default(now()) @db.Timestamptz(6)
+  driver_ledger_entries   driver_ledger_entries[]
+  driver_location_updates driver_location_updates[]
+  payment_records         payment_records?
+  ratings                 ratings[]
+  ride_events             ride_events[]
+  ride_offers             ride_offers[]
+  users                   users?                    @relation(fields: [cancelled_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currencies              currencies                @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  customer_profiles       customer_profiles         @relation(fields: [customer_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  driver_profiles         driver_profiles?          @relation(fields: [driver_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  pricing_rules           pricing_rules             @relation(fields: [pricing_rule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service_areas           service_areas             @relation(fields: [service_area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehicles                vehicles?                 @relation(fields: [vehicle_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehicle_types           vehicle_types             @relation(fields: [vehicle_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  support_tickets         support_tickets[]
 
-  @@map("rides")
+  @@index([customer_id, requested_at(sort: Desc)], map: "rides_customer_history_idx")
+  @@index([pickup], map: "rides_pickup_gix", type: Gist)
+  @@index([service_area_id, status, requested_at(sort: Desc)], map: "rides_status_area_idx")
+  @@index([driver_id, requested_at(sort: Desc)], map: "rides_driver_history_idx")
 }
 
-model RideEvents {
-  id             Int      @id @default(autoincrement()) @db.BigInt
-  ride           Rides    @relation(fields: [rideId], references: [id])
-  rideId         String   @field("ride_id") @db.Uuid
-  eventType      String   @field("event_type") @db.Text
-  fromStatus     String?  @field("from_status") @db.Text
-  toStatus       String?  @field("to_status") @db.Text
-  actorRole      String   @field("actor_role") @db.Text
-  actorUserId    String?  @field("actor_user_id") @db.Uuid
-  clientEventId  String?  @field("client_event_id") @db.Uuid
-  payload        Json     @default("{}") @db.Jsonb
-  occurredAt     DateTime @field("occurred_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model saved_places {
+  id                String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id       String                   @db.Uuid
+  label             String
+  address_text      String?
+  location          Unsupported("geography")
+  created_at        DateTime                 @default(now()) @db.Timestamptz(6)
+  customer_profiles customer_profiles        @relation(fields: [customer_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("ride_events")
+  @@index([customer_id], map: "saved_places_customer_idx")
 }
 
-model RideOffers {
-  id                      String   @id @default(uuid()) @db.Uuid
-  ride                    Rides    @relation(fields: [rideId], references: [id])
-  rideId                  String   @field("ride_id") @db.Uuid
-  driver                  DriverProfiles @relation(fields: [driverId], references: [userId])
-  driverId                String   @field("driver_id") @db.Uuid
-  status                  String   @default("PENDING") @db.Text
-  roundNo                 Int      @field("round_no") @db.SmallInt
-  distanceToPickupM       Int?     @field("distance_to_pickup_m") @db.Int
-  etaSecondsEstimate      Int?     @field("eta_seconds_estimate") @db.Int
-  driverLocationAgeS      Int?     @field("driver_location_age_s") @db.Int
-  offeredAt               DateTime @field("offered_at") @db.Timestamptz @default(now())
-  expiresAt               DateTime @field("expires_at") @db.Timestamptz
-  respondedAt             DateTime? @field("responded_at") @db.Timestamptz
-
-  @@unique([rideId, driverId])
-  @@map("ride_offers")
+model schema_migrations {
+  version     String   @id
+  description String
+  applied_at  DateTime @default(now()) @db.Timestamptz(6)
 }
 
-model DriverLocationUpdates {
-  id          Int      @id @default(autoincrement()) @db.BigInt
-  driver      DriverProfiles @relation(fields: [driverId], references: [userId])
-  driverId    String   @field("driver_id") @db.Uuid
-  ride        Rides?   @relation(fields: [rideId], references: [id])
-  rideId      String?  @field("ride_id") @db.Uuid
-  location    Unsupported("geography")
-  accuracyM   Float?   @field("accuracy_m") @db.Real
-  speedMps    Float?   @field("speed_mps") @db.Real
-  headingDeg  Float?   @field("heading_deg") @db.Real
-  recordedAt  DateTime @field("recorded_at") @db.Timestamptz
-  receivedAt  DateTime @field("received_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model service_areas {
+  id                String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code              String                   @unique
+  name_ar           String
+  name_en           String
+  boundary          Unsupported("geography")
+  timezone          String
+  currency_code     String
+  is_active         Boolean                  @default(true)
+  created_at        DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime                 @default(now()) @db.Timestamptz(6)
+  dispatch_settings dispatch_settings?
+  driver_profiles   driver_profiles[]
+  pricing_rules     pricing_rules[]
+  rides             rides[]
+  currencies        currencies               @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("driver_location_updates")
+  @@index([boundary], map: "service_areas_boundary_gix", type: Gist)
 }
 
-model PaymentRecords {
-  id               String   @id @default(uuid()) @db.Uuid
-  ride             Rides    @relation(fields: [rideId], references: [id])
-  rideId           String   @field("ride_id") @db.Uuid @unique
-  method           String   @db.Text
-  status           String   @default("PENDING") @db.Text
-  amount           Decimal  @db.Decimal(18,2)
-  currencyCode     String   @field("currency_code") @db.Text
-  provider         String?  @db.Text
-  providerReference String? @field("provider_reference") @db.Text
-  collectedAt      DateTime? @field("collected_at") @db.Timestamptz
-  reconciledBy     String?  @field("reconciled_by") @db.Uuid
-  reconciledAt     DateTime? @field("reconciled_at") @db.Timestamptz
-  createdAt        DateTime @field("created_at") @db.Timestamptz @default(now())
-  updatedAt        DateTime @field("updated_at") @db.Timestamptz @default(now())
-
-  @@map("payment_records")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
 }
 
-model DriverPayouts {
-  id             String   @id @default(uuid()) @db.Uuid
-  driver         DriverProfiles @relation(fields: [driverId], references: [userId])
-  driverId       String   @field("driver_id") @db.Uuid
-  direction      String   @db.Text
-  amount         Decimal  @db.Decimal(18,2)
-  currencyCode   String   @field("currency_code") @db.Text
-  status         String   @default("PENDING") @db.Text
-  method         String?  @db.Text
-  reference      String?  @db.Text
-  note           String?  @db.Text
-  requestedBy    Users    @relation("PayoutRequestedBy", fields: [requestedById], references: [id])
-  requestedById  String   @field("requested_by") @db.Uuid
-  reviewedBy     Users?   @relation("PayoutReviewedBy", fields: [reviewedById], references: [id])
-  reviewedById   String?  @field("reviewed_by") @db.Uuid
-  reviewedAt     DateTime? @field("reviewed_at") @db.Timestamptz
-  createdAt      DateTime @field("created_at") @db.Timestamptz @default(now())
-  updatedAt      DateTime @field("updated_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model support_ticket_notes {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id       String          @db.Uuid
+  author_id       String          @db.Uuid
+  body            String
+  is_internal     Boolean         @default(true)
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  users           users           @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  support_tickets support_tickets @relation(fields: [ticket_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("driver_payouts")
+  @@index([ticket_id, created_at], map: "support_ticket_notes_ticket_idx")
 }
 
-model DriverLedgerEntries {
-  id                Int      @id @default(autoincrement()) @db.BigInt
-  driver            DriverProfiles @relation(fields: [driverId], references: [userId])
-  driverId          String   @field("driver_id") @db.Uuid
-  ride              Rides?   @relation(fields: [rideId], references: [id])
-  rideId            String?  @field("ride_id") @db.Uuid
-  payout            DriverPayouts? @relation(fields: [payoutId], references: [id])
-  payoutId          String?  @field("payout_id") @db.Uuid
-  entryType         String   @field("entry_type") @db.Text
-  amount            Decimal  @db.Decimal(18,2)
-  currencyCode      String   @field("currency_code") @db.Text
-  idempotencyKey    String   @field("idempotency_key") @db.Text @unique
-  reversesEntryId   Int?     @field("reverses_entry_id") @db.BigInt @unique
-  memo              String?  @db.Text
-  createdBy         String?  @field("created_by") @db.Uuid
-  createdAt         DateTime @field("created_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model support_tickets {
+  id                                       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_number                            BigInt                 @unique @default(autoincrement())
+  ride_id                                  String?                @db.Uuid
+  reporter_id                              String                 @db.Uuid
+  category                                 String
+  status                                   String                 @default("OPEN")
+  subject                                  String
+  description                              String
+  assigned_to                              String?                @db.Uuid
+  resolved_at                              DateTime?              @db.Timestamptz(6)
+  created_at                               DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime               @default(now()) @db.Timestamptz(6)
+  support_ticket_notes                     support_ticket_notes[]
+  users_support_tickets_assigned_toTousers users?                 @relation("support_tickets_assigned_toTousers", fields: [assigned_to], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_support_tickets_reporter_idTousers users                  @relation("support_tickets_reporter_idTousers", fields: [reporter_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rides                                    rides?                 @relation(fields: [ride_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("driver_ledger_entries")
+  @@index([status, created_at], map: "support_tickets_status_idx")
 }
 
-model Ratings {
-  id          String   @id @default(uuid()) @db.Uuid
-  ride        Rides    @relation(fields: [rideId], references: [id])
-  rideId      String   @field("ride_id") @db.Uuid
-  rater       Users    @relation("RatingRater", fields: [raterId], references: [id])
-  raterId     String   @field("rater_id") @db.Uuid
-  ratee       Users    @relation("RatingRatee", fields: [rateeId], references: [id])
-  rateeId     String   @field("ratee_id") @db.Uuid
-  raterRole   String   @field("rater_role") @db.Text
-  score       Int      @db.SmallInt
-  comment     String?  @db.Text
-  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_roles {
+  user_id                            String   @db.Uuid
+  role                               String
+  granted_by                         String?  @db.Uuid
+  granted_at                         DateTime @default(now()) @db.Timestamptz(6)
+  users_user_roles_granted_byTousers users?   @relation("user_roles_granted_byTousers", fields: [granted_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_user_roles_user_idTousers    users    @relation("user_roles_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([rideId, raterRole])
-  @@map("ratings")
+  @@id([user_id, role])
 }
 
-model SupportTickets {
-  id          String   @id @default(uuid()) @db.Uuid
-  ticketNumber Int     @field("ticket_number") @unique @default(autoincrement()) @db.BigInt
-  ride        Rides?   @relation(fields: [rideId], references: [id])
-  rideId      String?  @field("ride_id") @db.Uuid
-  reporter    Users    @relation("SupportTicketReporter", fields: [reporterId], references: [id])
-  reporterId  String   @field("reporter_id") @db.Uuid
-  category    String   @db.Text
-  status      String   @default("OPEN") @db.Text
-  subject     String   @db.Text
-  description String   @db.Text
-  assignedTo  String?  @field("assigned_to") @db.Uuid
-  resolvedAt  DateTime? @field("resolved_at") @db.Timestamptz
-  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
-  updatedAt   DateTime @field("updated_at") @db.Timestamptz @default(now())
-  notes       SupportTicketNote[]
-
-  @@map("support_tickets")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  id                                                              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone_e164                                                      String?                 @unique
+  phone_verified_at                                               DateTime?               @db.Timestamptz(6)
+  email                                                           String?                 @unique
+  password_hash                                                   String?
+  display_name                                                    String?
+  locale                                                          String                  @default("ar")
+  status                                                          String                  @default("ACTIVE")
+  failed_login_count                                              Int                     @default(0)
+  locked_until                                                    DateTime?               @db.Timestamptz(6)
+  last_login_at                                                   DateTime?               @db.Timestamptz(6)
+  created_at                                                      DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at                                                      DateTime                @default(now()) @db.Timestamptz(6)
+  deleted_at                                                      DateTime?               @db.Timestamptz(6)
+  audit_logs                                                      audit_logs[]
+  customer_profiles                                               customer_profiles?
+  device_tokens                                                   device_tokens[]
+  driver_documents                                                driver_documents[]
+  driver_ledger_entries                                           driver_ledger_entries[]
+  driver_payouts_driver_payouts_requested_byTousers               driver_payouts[]        @relation("driver_payouts_requested_byTousers")
+  driver_payouts_driver_payouts_reviewed_byTousers                driver_payouts[]        @relation("driver_payouts_reviewed_byTousers")
+  driver_profiles_driver_profiles_user_idTousers                  driver_profiles?        @relation("driver_profiles_user_idTousers")
+  driver_profiles_driver_profiles_verification_reviewed_byTousers driver_profiles[]       @relation("driver_profiles_verification_reviewed_byTousers")
+  idempotency_keys                                                idempotency_keys[]
+  notifications                                                   notifications[]
+  payment_records                                                 payment_records[]
+  pricing_rules_pricing_rules_created_byTousers                   pricing_rules[]         @relation("pricing_rules_created_byTousers")
+  pricing_rules_pricing_rules_published_byTousers                 pricing_rules[]         @relation("pricing_rules_published_byTousers")
+  ratings_ratings_ratee_idTousers                                 ratings[]               @relation("ratings_ratee_idTousers")
+  ratings_ratings_rater_idTousers                                 ratings[]               @relation("ratings_rater_idTousers")
+  refresh_tokens                                                  refresh_tokens[]
+  ride_events                                                     ride_events[]
+  rides                                                           rides[]
+  support_ticket_notes                                            support_ticket_notes[]
+  support_tickets_support_tickets_assigned_toTousers              support_tickets[]       @relation("support_tickets_assigned_toTousers")
+  support_tickets_support_tickets_reporter_idTousers              support_tickets[]       @relation("support_tickets_reporter_idTousers")
+  user_roles_user_roles_granted_byTousers                         user_roles[]            @relation("user_roles_granted_byTousers")
+  user_roles_user_roles_user_idTousers                            user_roles[]            @relation("user_roles_user_idTousers")
 }
 
-model SupportTicketNotes {
-  id        String   @id @default(uuid()) @db.Uuid
-  ticket    SupportTickets @relation(fields: [ticketId], references: [id])
-  ticketId  String   @field("ticket_id") @db.Uuid
-  author    Users    @relation("SupportTicketNoteAuthor", fields: [authorId], references: [id])
-  authorId  String   @field("author_id") @db.Uuid
-  body      String   @db.Text
-  isInternal Boolean @field("is_internal") @default(true) @db.Boolean
-  createdAt DateTime @field("created_at") @db.Timestamptz @default(now())
-
-  @@map("support_ticket_notes")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vehicle_types {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code          String          @unique
+  name_ar       String
+  name_en       String
+  capacity      Int             @db.SmallInt
+  sort_order    Int             @default(0) @db.SmallInt
+  is_active     Boolean         @default(true)
+  pricing_rules pricing_rules[]
+  rides         rides[]
+  vehicles      vehicles[]
 }
 
-model Notifications {
-  id          String   @id @default(uuid()) @db.Uuid
-  user        Users    @relation(fields: [userId], references: [id])
-  userId      String   @field("user_id") @db.Uuid
-  kind        String   @db.Text
-  title       String   @db.Text
-  body        String   @db.Text
-  data        Json     @default("{}") @db.Jsonb
-  dedupeKey   String?  @field("dedupe_key") @db.Text
-  pushStatus  String   @field("push_status") @db.Text @default("NOT_REQUESTED")
-  pushAttempts Int     @field("push_attempts") @db.SmallInt @default(0)
-  readAt      DateTime? @field("read_at") @db.Timestamptz
-  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
-
-  @@map("notifications")
-}
-
-model AuditLogs {
-  id          Int      @id @default(autoincrement()) @db.BigInt
-  actorUserId   String? @field("actor_user_id") @db.Uuid
-  actorRole     String? @field("actor_role") @db.Text
-  action      String   @db.Text
-  entityType  String   @field("entity_type") @db.Text
-  entityId    String?  @field("entity_id") @db.Text
-  beforeState Json?    @field("before_state") @db.Jsonb
-  afterState  Json?    @field("after_state") @db.Jsonb
-  reason      String?  @db.Text
-  ip          String?  @db.Text
-  userAgent   String?  @field("user_agent") @db.Text
-  requestId   String?  @field("request_id") @db.Text
-  createdAt   DateTime @field("created_at") @db.Timestamptz @default(now())
-
-  @@map("audit_logs")
-}
-
-model IdempotencyKeys {
-  id              String   @id @default(uuid()) @db.Uuid
-  user            Users    @relation(fields: [userId], references: [id])
-  userId          String   @field("user_id") @db.Uuid
-  scope           String   @db.Text
-  idempotencyKey  String   @field("idempotency_key") @db.Text
-  requestHash     String   @field("request_hash") @db.Text
-  state           String   @default("IN_PROGRESS") @db.Text
-  responseStatus  Int?     @field("response_status") @db.Int
-  responseBody    Json?    @field("response_body") @db.Jsonb
-  resourceType    String?  @field("resource_type") @db.Text
-  resourceId      String?  @field("resource_id") @db.Uuid
-  createdAt       DateTime @field("created_at") @db.Timestamptz @default(now())
-  expiresAt       DateTime @field("expires_at") @db.Timestamptz
-
-  @@unique([userId, scope, idempotencyKey])
-  @@map("idempotency_keys")
-}
-
-model SchemaMigrations {
-  version    String @db.Text
-  description String @db.Text
-
-  @@id([version])
-  @@map("schema_migrations")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vehicles {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  driver_id        String             @db.Uuid
+  vehicle_type_id  String             @db.Uuid
+  plate_number     String
+  make             String?
+  model            String?
+  year             Int?               @db.SmallInt
+  color            String?
+  is_active        Boolean            @default(true)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  driver_documents driver_documents[]
+  rides            rides[]
+  driver_profiles  driver_profiles    @relation(fields: [driver_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  vehicle_types    vehicle_types      @relation(fields: [vehicle_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }

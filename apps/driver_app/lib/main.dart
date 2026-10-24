@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_router.dart';
-import 'core/constants.dart';
+import 'core/app_constants.dart';
+import 'ui/core/app_theme.dart';
 
 void main() {
   runApp(const ProviderScope(child: DriverApp()));
@@ -20,11 +21,7 @@ class DriverApp extends ConsumerWidget {
       title: 'تطبيق السائق - مشوار اليمن',
       routerConfig: router,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF0B5E7F),
-        fontFamily: 'Tajawal',
-      ),
+      theme: appTheme(),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

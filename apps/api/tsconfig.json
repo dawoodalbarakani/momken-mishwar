@@ -10,7 +10,7 @@
     "noUncheckedIndexedAccess": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": ["node", "vitest"],
     "noEmit": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,

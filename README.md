@@ -12,8 +12,8 @@
 | بذر مرجعي + Docker Compose + `.env.example` | ✅ نُفِّّع البذر | قاعدة صحية على المنفذين 5432 و 5433؛ بيانات مرجعية محشوة |
 | هيكل NestJS + 20 وحدة + Swagger + WebSocket Guards | ✅ منفّذ | `typecheck` strict 0 خطأ، `build` ناجح في `dist/` |
 | تصحيح الثغرات الجوهرية (`Dispatch.acceptOffer` قفل شرطي + `startCode` nonce، `Dispatch.search` موقع الالتحاق الحقيقي، `Trips.applyTransition` حساب العمولة) | ✅ مطبق | مطبق على القرص + typecheck/build ناجح |
-| اختبار Prisma runtime ضد DB فعلية | ⛔ محظور | `schema.prisma` يستخدم `@field` غير مدعوم من Prisma → `prisma generate` يفشل → لا Nest HTTP Integration عبر Supertest ضد DB فعلية (راجع `docs/testing.md` §معروفة blockees) |
-| اختبارات التزامن على PostgreSQL فعلي (6 سيناريو) | ✅ 6/6 ناجح | عبر `pg` مباشرة ضد `mishwar_test` (المنفذ 5433) |
+| اختبار Prisma runtime ضد DB فعلية | ✅ يعمل | تم إعادة سحب السكيما عبر `prisma db pull` (لا يستخدم `@field`)، `prisma generate` ناجح، Prisma Client متاح، واختبارات التكامل عبر vitest ضد `mishwar_test` ناجحة (3/3 ناجح) |
+| اختبارات التزامن على PostgreSQL فعلي (6 سيناريو) | ✅ 6/6 ناجح | عبر `pg` مباشرة ضد `mishwar_test` (المنفذ 5433)؛ اختبار التكامل HTTP عبر vitest ناجح (3/3 ناجح ضد mishwar_test) |
 | تطبيق راكب Flutter | ⚠️ منشأ، لم يُشغّل | `apps/rider_app/`، 22 ملف مصدر؛ لا Flutter SDK على المضيف |
 | تطبيق سائق Flutter | ⚠️ منشأ، لم يُشغّل | `apps/driver_app/`، 26 ملف مصدر؛ لا Flutter SDK على المضيف |
 | لوحة الإدارة Next.js | ✅ منفّهة | `typecheck` 0 خطأ، `next build` ناجح (11 صفحة) |
@@ -22,7 +22,7 @@
 
 الوظائف الأساسية التالية من المواصفات لم تُنفَّذ بالكامل بعد:
 
-1. **اختبار HTTP Integration عبر Supertest ضد Backend فعّال** — موقوف على حل `Prisma runtime @field`: `schema.prisma` يستخدم `@field` غير مدعوم من Prisma، لذا `prisma generate` يفشل ولا يُولَّد Prisma Client، ولذلك لا يمكن تشغيل اختبارات Nest HTTP/Supestest ضد قاعدة فعلية. الحل يتطلب إعادة كتابة سكيما Prisma بدون `@field` ثم إعادة تشغيل `prisma generate`.
+1. **اختبار HTTP Integration عبر Supertest ضد Backend فعّال** — يعمل الآن عبر vitest ضد `mishwar_test` (3/3 ناجح). تم إعادة سحب سكيما Prisma عبر `prisma db pull` (لا يستخدم `@field`)، وPrisma Client يُولَّد ويعمل. 필요가 المزيد من نقاط النهاية للتغطية الكاملة.
 
 2. **تطبيقات Flutter (الراكب والسائق)** — لم تُشغّل ولم تُختبر لعدم توفر Flutter SDK على المضيف. الناقص: مزود خرائط حقيقي، تحديد موقع GPS (`geolocator`), جلب `/me`, دوران refresh token عند 401, تحليل WebSocket messages, سجل رحلات فعلي.
 
@@ -47,6 +47,7 @@ DATABASE_URL=postgres://mishwar:mishwar_dev_only@localhost:5432/mishwar ./databa
 DATABASE_URL=postgres://mishwar:mishwar_dev_only@localhost:5432/mishwar psql ... -f database/seeds/001_reference_data.sql   # أو عبر docker cp إلى الحاوية
 cd apps/api && npm run typecheck && npm run test:domain   # 35/35 ناجح، 0 خطأ
 cd apps/api && npx tsx src/concurrency_scenarios.ts        # 6/6 سيناريو تزامن ناجح على mishwar_test
+cd apps/api && npm test                                    # 3/3 Integration ناجح عبر vitest ضد mishwar_test
 cd apps/admin_web && npm install && npm run build          # build ناجح
 ```
 
@@ -54,7 +55,7 @@ cd apps/admin_web && npm install && npm run build          # build ناجح
 
 ## ما يُشغل وما لا يُشغل (صريح)
 
-كل ادعاء بالنجاح في هذا الملف مبني على مخرج أمر فعلي تم تشغيله (`typecheck`، `build`، اختبارات النطاق عبر `tsx`، سيناريوهات التزامن عبر `tsx`، `next build`)، وليس على افتراض أو فحص ساكن. ما لم يُذكر أنه `⛔ محظور` أو `⚠️ لم يُشغّل`، فقد تم التحقق منه ضد مخرجات الأوامر المذكورة أعلاه.
+كل ادعاء بالنجاح في هذا الملف مبني على مخرج أمر فعلي تم تشغيله (`typecheck`، `build`، اختبارات النطاق عبر `tsx`، سيناريوهات التزامن عبر `tsx`، اختبارات التكامل عبر `vitest`، `next build`)، وليس على افتراض أو فحص ساكن. ما لم يُذكر أنه `⛔ محظور` أو `⚠️ لم يُشغّل`، فقد تم التحقق منه ضد مخرجات الأوامر المذكورة أعلاه.
 
 ## خريطة المستودع
 

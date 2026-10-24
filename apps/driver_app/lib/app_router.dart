@@ -1,18 +1,19 @@
 library driver_app.app_router;
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'features/auth/register_screen.dart';
-import 'features/auth/login_screen.dart';
-import 'features/auth/otp_screen.dart';
-import 'features/auth/documents_screen.dart';
-import 'features/home/home_screen.dart';
-import 'features/offers/offers_screen.dart';
-import 'features/ride_tracking/ride_tracking_screen.dart';
-import 'features/earnings/earnings_screen.dart';
-import 'features/earnings/payout_request_screen.dart';
-import 'core/constants.dart';
+import 'domain/models/auth_user.dart';
+import 'ui/features/auth/view_models/auth_view_model.dart';
+import 'ui/features/auth/views/login_screen.dart';
+import 'ui/features/auth/views/otp_screen.dart';
+import 'ui/features/auth/views/register_screen.dart';
+import 'ui/features/auth/views/documents_screen.dart';
+import 'ui/features/home/views/home_screen.dart';
+import 'ui/features/offers/views/offers_screen.dart';
+import 'ui/features/ride_tracking/views/ride_tracking_screen.dart';
+import 'ui/features/earnings/views/earnings_screen.dart';
+import 'ui/features/earnings/views/payout_request_screen.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -21,10 +22,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/otp', builder: (context, state) {
-        final phone = state.queryParameters['phone'] ?? '';
-        return OtpScreen(phone: phone);
-      }),
+      GoRoute(
+        path: '/otp',
+        builder: (context, state) {
+          final phone = state.uri.queryParameters['phone'] ?? '';
+          return OtpScreen(phone: phone);
+        },
+      ),
       GoRoute(path: '/documents', builder: (context, state) => const DocumentsScreen()),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
       GoRoute(path: '/offers', builder: (context, state) => const OffersScreen()),
@@ -42,17 +46,24 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
+/// Splash / auth gate. Redirects to /home when authenticated, /login otherwise.
 class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authProvider);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    final auth = ref.watch(authViewModelProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!context.mounted) return;
-      if (auth.token != null && auth.token!.isNotEmpty) {
-        context.go('/home');
-      } else if (auth.isLoading == false) {
+      final authenticated = await auth.initialize();
+      if (!context.mounted) return;
+      if (authenticated) {
+        if (auth.isApproved) {
+          context.go('/home');
+        } else {
+          context.go('/documents');
+        }
+      } else {
         context.go('/login');
       }
     });
@@ -65,7 +76,7 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authProvider);
+    final auth = ref.watch(authViewModelProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('الملف الشخصي')),
       body: Center(
@@ -75,13 +86,13 @@ class ProfileScreen extends ConsumerWidget {
             Text(auth.user?.name ?? 'السائق', style: const TextStyle(fontSize: 20)),
             Text(auth.user?.phone ?? ''),
             const SizedBox(height: 16),
-            Text('حالة الاعتماد: ${_label(auth.verificationStatus)}'),
+            Text('حالة الاعتماد: ${_label(auth.user?.verificationStatus)}'),
             const SizedBox(height: 16),
             SizedBox(
               height: 48,
               child: OutlinedButton(
                 onPressed: () async {
-                  await ref.read(authProvider.notifier).logout();
+                  await auth.logout();
                   if (context.mounted) context.go('/login');
                 },
                 child: const Text('تسجيل الخروج'),

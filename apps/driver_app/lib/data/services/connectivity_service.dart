@@ -1,0 +1,35 @@
+library driver_app.data.services.connectivity_service;
+
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+enum ConnectionStatus { online, offline, unknown }
+
+class ConnectivityService {
+  ConnectivityService();
+  final Connectivity _connectivity = Connectivity();
+
+  Stream<ConnectionStatus> watch() async* {
+    yield await check();
+    await for (final results in _connectivity.onConnectivityChanged) {
+      yield _map(results);
+    }
+  }
+
+  Future<ConnectionStatus> check() async {
+    final results = await _connectivity.checkConnectivity();
+    return _map(results);
+  }
+
+  ConnectionStatus _map(List<ConnectivityResult> results) {
+    if (results.isEmpty || results.contains(ConnectivityResult.none)) {
+      return ConnectionStatus.offline;
+    }
+    if (results.any((r) => r == ConnectivityResult.wifi || r == ConnectivityResult.mobile || r == ConnectivityResult.ethernet)) {
+      return ConnectionStatus.online;
+    }
+    return ConnectionStatus.unknown;
+  }
+}
+
+final connectivityServiceProvider = Provider((ref) => ConnectivityService());

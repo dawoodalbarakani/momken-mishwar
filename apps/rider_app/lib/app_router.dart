@@ -3,14 +3,14 @@ library rider_app.app_router;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'features/auth/login_screen.dart';
-import 'features/auth/otp_screen.dart';
-import 'features/home/home_screen.dart';
-import 'features/quote/quote_screen.dart';
-import 'features/ride_request/ride_request_screen.dart';
-import 'features/ride_tracking/ride_tracking_screen.dart';
-import 'features/ride_completion/ride_completion_screen.dart';
-import 'core/constants.dart';
+import 'ui/features/auth/views/login_screen.dart';
+import 'ui/features/auth/views/otp_screen.dart';
+import 'ui/features/auth/view_models/auth_view_model.dart';
+import 'ui/features/home/views/home_screen.dart';
+import 'ui/features/quote/views/quote_screen.dart';
+import 'ui/features/ride_request/views/ride_request_screen.dart';
+import 'ui/features/ride_tracking/views/ride_tracking_screen.dart';
+import 'ui/features/ride_completion/views/ride_completion_screen.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -43,12 +43,14 @@ class SplashScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authProvider);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    final auth = ref.watch(authViewModelProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!context.mounted) return;
-      if (auth.token != null && auth.token!.isNotEmpty) {
+      final authenticated = await auth.initialize();
+      if (!context.mounted) return;
+      if (authenticated) {
         context.go('/home');
-      } else if (auth.isLoading == false) {
+      } else {
         context.go('/login');
       }
     });
