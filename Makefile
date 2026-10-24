@@ -14,10 +14,13 @@ DATABASE_TEST_URL ?= postgres://mishwar:mishwar_test_only@localhost:5433/mishwar
 FLUTTER ?= flutter
 DC := docker compose -f $(DOCKER_COMPOSE_FILE)
 
-.PHONY: help up down db\:up db\:down db\:restart db\:logs db\:status db\:migrate db\:seed db\:reset db\:test\:up api\:install api\:typecheck api\:build api\:start api\:start\:dev api\:test api\:test\:domain api\:test\:cov api\:prisma\:generate api\:prisma\:db-pull api\:prisma\:seed admin\:install admin\:typecheck admin\:build admin\:dev admin\:lint flutter\:doctor rider\:install rider\:analyze driver\:install driver\:analyze install typecheck test test\:domain test\:all lint clean env\:setup test\:ci ci
+HASH := \#
+SEP := $(HASH)$(HASH)
+
+.PHONY: help up down db\:up db\:down db\:restart db\:logs db\:status db\:migrate db\:seed db\:reset db\:test\:up api\:install api\:typecheck api\:build api\:start api\:start\:dev api\:test api\:test\:domain api\:test\:cov api\:prisma\:generate api\:prisma\:db-pull api\:prisma\:seed admin\:install admin\:typecheck admin\:build admin\:dev admin\:lint flutter\:doctor rider\:install rider\:analyze driver\:install driver\:analyze install typecheck test test\:domain test\:all lint env\:setup test\:ci ci
 
 help: ## Show available make targets with descriptions
-	@grep ' ## ' $(MAKEFILE_LIST) | grep -v '^#' | awk -F' ## ' '{split($$1,a," "); t=a[1]; gsub(/\\/,"",t); sub(/:$/,"",t); printf "\033[36m%-28s\033[0m %s\n", t, $$2}'
+	@bash -c 'grep "$(SEP)" $(MAKEFILE_LIST) | awk -F" $(SEP)" '\''{t=$$1; gsub(/\\/,"",t); if (substr(t,length(t))==":") t=substr(t,1,length(t)-1); printf "\033[36m%-28s\033[0m %s\n", t, $$2}'\''' sh "$(MAKEFILE_LIST)"
 
 # ---------------------------------------------------------------
 # Convenience aliases
@@ -163,3 +166,4 @@ env\:setup: ## Copy .env.example to .env if .env does not exist
 test\:ci: db\:test\:up test ## Run tests against the test database
 
 ci: db\:test\:up typecheck test ## Run full CI pipeline: test db, typecheck, tests
+

@@ -1087,6 +1087,12 @@
       "skillPath": "skills/dependabot/SKILL.md",
       "computedHash": "a7f64786f061e1ec9a513757a54f96e3c05b1f88d9d7e380222defbcd87a56e4"
     },
+    "design-uber": {
+      "source": "deepparser/skills",
+      "sourceType": "github",
+      "skillPath": "design-uber/SKILL.md",
+      "computedHash": "96fe74ea99d02160c823962d1acae61b2f2cafd4e3095f560b5cff98a4c00958"
+    },
     "desk-journal": {
       "source": "github/awesome-copilot",
       "sourceType": "github",
