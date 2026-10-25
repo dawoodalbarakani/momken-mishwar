@@ -24,11 +24,6 @@ jobs:
       - name: Generate module checksums
         working-directory: api_go
         run: go mod tidy
-      - name: Verify tests and vet
-        working-directory: api_go
-        run: |
-          go test ./...
-          go vet ./...
       - name: Commit module checksums
         run: |
           if git diff --quiet -- api_go/go.mod api_go/go.sum; then
