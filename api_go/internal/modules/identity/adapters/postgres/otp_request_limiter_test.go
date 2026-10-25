@@ -12,10 +12,10 @@ import (
 func TestOTPRequestLimiterRejectsInvalidConfiguration(t *testing.T) {
 	pool := &pgxpool.Pool{}
 	cases := []struct {
-		name string
-		db *pgxpool.Pool
-		key []byte
-		window time.Duration
+		name             string
+		db               *pgxpool.Pool
+		key              []byte
+		window           time.Duration
 		phoneLimit, ipLimit int
 	}{
 		{name: "nil database", db: nil, key: bytes.Repeat([]byte{1}, 32), window: time.Minute, phoneLimit: 3, ipLimit: 10},
@@ -27,7 +27,9 @@ func TestOTPRequestLimiterRejectsInvalidConfiguration(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := NewOTPRequestLimiter(tc.db, tc.key, tc.window, tc.phoneLimit, tc.ipLimit)
-			if err == nil { t.Fatal("expected invalid configuration error") }
+			if err == nil {
+				t.Fatal("expected invalid configuration error")
+			}
 		})
 	}
 }
@@ -38,12 +40,19 @@ func TestOTPRequestLimiterDigestIsScopedAndDoesNotContainInput(t *testing.T) {
 	a := limiter.digest("PHONE", phone)
 	b := limiter.digest("PHONE", phone)
 	c := limiter.digest("IP", phone)
-	if !bytes.Equal(a, b) { t.Fatal("same key and scope should produce a stable digest") }
-	if bytes.Equal(a, c) { t.Fatal("different scopes must produce different digests") }
-	if bytes.Contains(a, []byte(phone)) { t.Fatal("digest must not contain the raw phone value") }
-	if len(a) != 32 { t.Fatalf("digest length = %d, want 32", len(a)) }
+	if !bytes.Equal(a, b) {
+		t.Fatal("same key and scope should produce a stable digest")
+	}
+	if bytes.Equal(a, c) {
+		t.Fatal("different scopes must produce different digests")
+	}
+	if bytes.Contains(a, []byte(phone)) {
+		t.Fatal("digest must not contain the raw phone value")
+	}
+	if len(a) != 32 {
+		t.Fatalf("digest length = %d, want 32", len(a))
+	}
 }
-
 
 func TestOTPRequestLimiterCleanupRejectsMissingDatabase(t *testing.T) {
 	var limiter *OTPRequestLimiter
