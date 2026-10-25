@@ -83,5 +83,23 @@ func (r *RefreshTokenRepository) RevokeFamily(ctx context.Context, familyID, rea
 	return nil
 }
 
+// RevokeByHash revokes the family associated with a presented credential. It
+// hashes are supplied by the service; raw secrets never reach persistence.
+func (r *RefreshTokenRepository) RevokeByHash(ctx context.Context, tokenHash, reason string, now time.Time) error {
+	if r.db == nil { return errors.New("identity refresh token repository: nil database") }
+	if tokenHash == "" || reason == "" { return errors.New("token hash and revocation reason are required") }
+	tx, err := r.db.Begin(ctx)
+	if err != nil { return fmt.Errorf("begin refresh revocation: %w", err) }
+	defer func() { _ = tx.Rollback(ctx) }()
+	var familyID string
+	err = tx.QueryRow(ctx, `SELECT family_id::text FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE`, tokenHash).Scan(&familyID)
+	if errors.Is(err, pgx.ErrNoRows) { return domain.ErrRefreshTokenInvalid }
+	if err != nil { return fmt.Errorf("load refresh token for revocation: %w", err) }
+	_, err = tx.Exec(ctx, `UPDATE refresh_tokens SET revoked_at = COALESCE(revoked_at, $2), revoked_reason = COALESCE(revoked_reason, $3) WHERE family_id = $1::uuid`, familyID, now, reason)
+	if err != nil { return fmt.Errorf("revoke refresh family: %w", err) }
+	if err := tx.Commit(ctx); err != nil { return fmt.Errorf("commit refresh revocation: %w", err) }
+	return nil
+}
+
 // Keep the interface relationship checked by the compiler.
 var _ ports.RefreshTokenRepository = (*RefreshTokenRepository)(nil)
