@@ -55,7 +55,7 @@ type OTPServiceConfig struct {
 }
 
 func NewOTPService(cfg OTPServiceConfig) (*OTPService, error) {
-	if cfg.Repository == nil || cfg.Delivery == nil || len(cfg.Pepper) < 32 ||
+	if cfg.Repository == nil || cfg.Delivery == nil || cfg.Limiter == nil || len(cfg.Pepper) < 32 ||
 		cfg.TTL <= 0 || cfg.MaxAttempts <= 0 {
 		return nil, ErrOTPConfig
 	}
@@ -79,14 +79,12 @@ func (s *OTPService) Request(ctx context.Context, phoneE164, clientIP string, pu
 		return domain.ErrInvalidOTPChallenge
 	}
 	now := s.now().UTC()
-	if s.limiter != nil {
-		allowed, err := s.limiter.Allow(ctx, phoneE164, clientIP, now)
-		if err != nil {
-			return fmt.Errorf("check OTP request limit: %w", err)
-		}
-		if !allowed {
-			return ErrOTPRequestLimited
-		}
+	allowed, err := s.limiter.Allow(ctx, phoneE164, clientIP, now)
+	if err != nil {
+		return fmt.Errorf("check OTP request limit: %w", err)
+	}
+	if !allowed {
+		return ErrOTPRequestLimited
 	}
 
 	code, err := generateNumericCode(6)
