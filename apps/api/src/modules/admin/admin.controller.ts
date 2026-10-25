@@ -68,4 +68,11 @@ export class AdminController {
   balances() {
     return this.service.driverBalances();
   }
+
+  @Get('dashboard/stats')
+  @ApiOperation({ summary: 'Admin dashboard statistics' })
+  @Roles('ADMIN', 'SUPER_ADMIN', 'OPERATIONS_MANAGER')
+  stats() {
+    return this.service.stats();
+  }
 }

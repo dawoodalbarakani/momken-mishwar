@@ -59,4 +59,26 @@ export class AdminService {
   async driverBalances() {
     return this.prisma.$queryRaw`SELECT driver_id, currency_code, balance, entry_count FROM driver_balances ORDER BY driver_id`;
   }
+
+  async stats() {
+    const [rideStats, driverStats, payoutStats] = await Promise.all([
+      this.prisma.$queryRaw`SELECT status, count(*) AS count FROM rides GROUP BY status`,
+      this.prisma.$queryRaw`SELECT count(*) AS count FROM driver_profiles WHERE is_online = true`,
+      this.prisma.$queryRaw`SELECT sum(amount) AS total FROM driver_payouts WHERE status = 'APPROVED'`,
+    ]);
+
+    const tripsByStatus: Record<string, number> = {};
+    let totalRides = 0;
+    for (const row of rideStats as any[]) {
+      tripsByStatus[row.status] = Number(row.count);
+      totalRides += Number(row.count);
+    }
+
+    return {
+      tripsByStatus,
+      totalRides,
+      onlineDrivers: Number((driverStats as any[])[0]?.count ?? 0),
+      totalPaidOutMinor: Number((payoutStats as any[])[0]?.total ?? 0),
+    };
+  }
 }

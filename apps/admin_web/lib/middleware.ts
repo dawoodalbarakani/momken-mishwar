@@ -3,6 +3,7 @@ import { PAGE_ROLES } from "./roles";
 import { parseJwt } from "./auth";
 
 const PROTECTED_PREFIXES = [
+  "/",
   "/drivers",
   "/rides",
   "/pricing",
@@ -62,5 +63,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/drivers/:path*", "/rides/:path*", "/pricing/:path*", "/finance/:path*", "/support/:path*", "/audit/:path*", "/login"],
+  matcher: ["/", "/drivers/:path*", "/rides/:path*", "/pricing/:path*", "/finance/:path*", "/support/:path*", "/audit/:path*", "/login"],
 };
