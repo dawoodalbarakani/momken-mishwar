@@ -154,3 +154,33 @@ func TestLoginRejectsMalformedBodyWithoutCallingService(t *testing.T) {
  if rec.Code != http.StatusBadRequest { t.Fatalf("status = %d, want 400", rec.Code) }
  if login.calls != 0 { t.Fatal("malformed request must not invoke login service") }
 }
+
+
+func TestOTPRequestInvalidPhoneReturnsBadRequest(t *testing.T) {
+ requester := &testOTPRequester{err: service.ErrInvalidPhone}
+ mux := http.NewServeMux()
+ (AuthHandlers{OTP: requester}).Register(mux)
+ req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/otp/request", strings.NewReader(`{"phone_e164":"not-a-phone"}`))
+ rec := httptest.NewRecorder()
+ mux.ServeHTTP(rec, req)
+ if rec.Code != http.StatusBadRequest { t.Fatalf("status = %d, want 400", rec.Code) }
+}
+
+func TestOTPRequestUnavailableWhenServiceIsNotConfigured(t *testing.T) {
+ mux := http.NewServeMux()
+ (AuthHandlers{}).Register(mux)
+ req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/otp/request", strings.NewReader(`{"phone_e164":"+967771234567"}`))
+ rec := httptest.NewRecorder()
+ mux.ServeHTTP(rec, req)
+ if rec.Code != http.StatusServiceUnavailable { t.Fatalf("status = %d, want 503", rec.Code) }
+}
+
+func TestLoginInactiveAccountReturnsForbidden(t *testing.T) {
+ login := &testSessionLogin{err: domain.ErrUserInactive}
+ mux := http.NewServeMux()
+ (AuthHandlers{Sessions: login}).Register(mux)
+ req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/otp/verify", strings.NewReader(`{"phone_e164":"+967771234567","code":"123456"}`))
+ rec := httptest.NewRecorder()
+ mux.ServeHTTP(rec, req)
+ if rec.Code != http.StatusForbidden { t.Fatalf("status = %d, want 403", rec.Code) }
+}
