@@ -1,3 +1,4 @@
+import * as crypto from 'node:crypto';
 import {
   Injectable,
   NotFoundException,
@@ -22,64 +23,87 @@ export class RideRequestsService {
     destLon: number;
     idempotencyKey: string;
   }) {
-    const existing = await this.prisma.idempotencyKeys.findUnique({
-      where: {
-        userId_scope_idempotencyKey: {
+    const requestHash = crypto.createHash('sha256').update(JSON.stringify({
+      serviceAreaId: params.serviceAreaId,
+      vehicleTypeId: params.vehicleTypeId,
+      pickupLat: params.pickupLat,
+      pickupLon: params.pickupLon,
+      destLat: params.destLat,
+      destLon: params.destLon,
+    })).digest('hex');
+
+    return this.prisma.tx(async (tx) => {
+      // Serialize ride creation for this customer across API instances. The DB also
+      // has a partial unique index on active rides as a final integrity boundary.
+      const customer = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM users WHERE id = ${params.customerId} FOR UPDATE`;
+      if (customer.length === 0) throw new NotFoundException('المستخدم غير موجود', 'Customer not found');
+
+      const existing = await tx.idempotencyKeys.findUnique({
+        where: {
+          userId_scope_idempotencyKey: {
+            userId: params.customerId,
+            scope: 'POST /rides',
+            idempotencyKey: params.idempotencyKey,
+          },
+        },
+      });
+      if (existing) {
+        if (existing.requestHash !== requestHash) {
+          throw new ConflictException('مفتاح منع التكرار مستخدم لطلب مختلف', 'Idempotency key was already used with a different request');
+        }
+        return { replayed: true, resourceId: existing.resourceId };
+      }
+
+      const active = await tx.rides.findFirst({
+        where: {
+          customerId: params.customerId,
+          status: { in: ['SEARCHING', 'ASSIGNED', 'ARRIVING', 'ARRIVED', 'IN_PROGRESS'] },
+        },
+      });
+      if (active) throw new ConflictException('لديك رحلة نشطة بالفعل', 'You already have an active ride');
+
+      // Only calculate a new quote for a genuinely new idempotency key; retries
+      // must replay the original resource even if pricing rules have since changed.
+      const quote = await this.pricing.quote({
+        pickupLat: params.pickupLat, pickupLon: params.pickupLon,
+        destLat: params.destLat, destLon: params.destLon,
+        serviceAreaId: params.serviceAreaId, vehicleTypeId: params.vehicleTypeId,
+      });
+
+      // Insert and capture the exact generated id in the same statement; never
+      // select "the latest SEARCHING ride", which can belong to another request.
+      const [rideIdRow] = await tx.$queryRaw<Array<{ id: string }>>`
+        INSERT INTO rides (
+          id, customer_id, service_area_id, vehicle_type_id, status, pickup, destination,
+          currency_code, pricing_rule_id, pricing_rule_version, price_breakdown,
+          quoted_total, estimated_distance_m, estimated_duration_s, search_expires_at
+        ) VALUES (
+          gen_random_uuid(), ${params.customerId}, ${params.serviceAreaId}, ${params.vehicleTypeId},
+          'SEARCHING',
+          ST_SetSRID(ST_MakePoint(${params.pickupLon}, ${params.pickupLat})::geometry, 4326)::geography,
+          ST_SetSRID(ST_MakePoint(${params.destLon}, ${params.destLat})::geometry, 4326)::geography,
+          ${quote.currency}, ${quote.ruleId}, ${quote.ruleVersion}, ${JSON.stringify(quote)}::jsonb,
+          ${quote.totalMinor / 100}, ${quote.distanceMeters}, ${quote.durationSeconds},
+          now() + interval '5 minutes'
+        ) RETURNING id`;
+      const ride = await tx.rides.findUnique({ where: { id: rideIdRow.id } });
+      if (!ride) throw new Error('Ride insert succeeded but the inserted row could not be read');
+
+      await tx.idempotencyKeys.create({
+        data: {
           userId: params.customerId,
           scope: 'POST /rides',
           idempotencyKey: params.idempotencyKey,
+          requestHash,
+          state: 'COMPLETED',
+          responseStatus: 201,
+          resourceId: ride.id,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
-      },
+      });
+
+      return { replayed: false, ride };
     });
-    if (existing) return { replayed: true, resourceId: existing.resourceId };
-
-    const active = await this.prisma.rides.findFirst({
-      where: {
-        customerId: params.customerId,
-        status: { in: ['SEARCHING', 'ASSIGNED', 'ARRIVING', 'ARRIVED', 'IN_PROGRESS'] },
-      },
-    });
-    if (active) throw new ConflictException('لديك رحلة نشطة بالفعل', 'You already have an active ride');
-
-    const quote = await this.pricing.quote({
-      pickupLat: params.pickupLat, pickupLon: params.pickupLon,
-      destLat: params.destLat, destLon: params.destLon,
-      serviceAreaId: params.serviceAreaId, vehicleTypeId: params.vehicleTypeId,
-    });
-
-    // Geography columns are Unsupported("geography") in Prisma, so the ride row is
-    // inserted with $executeRaw (PostGIS literals) and then read back.
-    await this.prisma.$executeRaw`
-      INSERT INTO rides (
-        id, customer_id, service_area_id, vehicle_type_id, status, pickup, destination,
-        currency_code, pricing_rule_id, pricing_rule_version, price_breakdown,
-        quoted_total, estimated_distance_m, estimated_duration_s, search_expires_at
-      ) VALUES (
-        gen_random_uuid(), ${params.customerId}, ${params.serviceAreaId}, ${params.vehicleTypeId},
-        'SEARCHING',
-        ST_SetSRID(ST_MakePoint(${params.pickupLon}, ${params.pickupLat})::geometry, 4326)::geography,
-        ST_SetSRID(ST_MakePoint(${params.destLon}, ${params.destLat})::geometry, 4326)::geography,
-        ${quote.currency}, ${quote.ruleId}, ${quote.ruleVersion}, ${JSON.stringify(quote)}::jsonb,
-        ${quote.totalMinor / 100}, ${quote.distanceMeters}, ${quote.durationSeconds},
-        now() + interval '5 minutes'
-      )`;
-
-    const [ride] = await this.prisma.$queryRaw`SELECT * FROM rides WHERE customer_id = ${params.customerId} AND status = 'SEARCHING' ORDER BY requested_at DESC LIMIT 1`;
-
-    await this.prisma.idempotencyKeys.create({
-      data: {
-        userId: params.customerId,
-        scope: 'POST /rides',
-        idempotencyKey: params.idempotencyKey,
-        requestHash: '',
-        state: 'COMPLETED',
-        responseStatus: 201,
-        resourceId: ride.id,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      },
-    });
-
-    return { replayed: false, ride };
   }
 
   async active(customerId: string) {

@@ -328,6 +328,62 @@ async function scenario6(ids: Ids): Promise<Scenario> {
   };
 }
 
+
+async function scenario7(ids: Ids): Promise<Scenario> {
+  const name = '7. معاملتان تنشئان رحلتين نشطتين للعميل نفسه';
+  const [r1, r2] = await Promise.all([
+    op(insertRideSql, [
+      ids.customer1UserId, ids.serviceAreaId, ids.vehicleTypeId,
+      44.20, 15.35, 44.25, 15.40, 'موقع الاستلام A', 'الوجهة A',
+      ids.pricingRuleId, ids.pricingRuleVersion,
+      JSON.stringify({ base_fare: 1000 }), 2200, 5000, 600,
+    ]),
+    op(insertRideSql, [
+      ids.customer1UserId, ids.serviceAreaId, ids.vehicleTypeId,
+      44.20, 15.35, 44.25, 15.40, 'موقع الاستلام B', 'الوجهة B',
+      ids.pricingRuleId, ids.pricingRuleVersion,
+      JSON.stringify({ base_fare: 1000 }), 2200, 5000, 600,
+    ]),
+  ]);
+  const total = r1.rowCount + r2.rowCount;
+  const rejectedByUnique = [r1.err, r2.err].includes('23505');
+  const pass = total === 1 && rejectedByUnique;
+  const idsToClean = [r1, r2].filter(r => r.rowCount === 1);
+  if (idsToClean.length) {
+    // A committed insert's id is retrieved by the unique customer and active status.
+    await withTxn(async c => {
+      const activeRideIds = (await c.query(
+        "SELECT id FROM rides WHERE customer_id = $1 AND status = 'SEARCHING'",
+        [ids.customer1UserId],
+      )).rows.map(row => row.id);
+      await c.query(cleanupRideSql, [activeRideIds]);
+    });
+  }
+  return { name, pass, detail: `insert1 rows=${r1.rowCount} err=${r1.err}; insert2 rows=${r2.rowCount} err=${r2.err}; total=${total} (expected one success and SQLSTATE 23505)` };
+}
+
+async function scenario8(ids: Ids): Promise<Scenario> {
+  const name = '8. قبول عرضين للرحلة نفسها لا يمكن أن يتجاوز القيد الفريد';
+  const { rideId, offer1, offer2 } = await withTxn(async c => {
+    const rideId = await createRide(c, ids.customer1UserId, ids.serviceAreaId, ids.vehicleTypeId, ids.pricingRuleId, ids.pricingRuleVersion);
+    const a = await c.query("INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1,$2,'PENDING',1,now()+interval '5 minutes') RETURNING id", [rideId, ids.driver1UserId]);
+    const b = await c.query("INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1,$2,'PENDING',1,now()+interval '5 minutes') RETURNING id", [rideId, ids.driver2UserId]);
+    return { rideId, offer1: a.rows[0].id, offer2: b.rows[0].id };
+  });
+  const [a, b] = await Promise.all([
+    op("UPDATE ride_offers SET status='ACCEPTED', responded_at=now() WHERE id=$1 AND status='PENDING'", [offer1]),
+    op("UPDATE ride_offers SET status='ACCEPTED', responded_at=now() WHERE id=$1 AND status='PENDING'", [offer2]),
+  ]);
+  const total = a.rowCount + b.rowCount;
+  const pass = total === 1 && [a.err, b.err].includes('23505');
+  await withTxn(async c => {
+    await c.query("UPDATE ride_offers SET status='CANCELLED', responded_at=now() WHERE ride_id=$1 AND status='PENDING'", [rideId]);
+    await c.query(cleanupRideSql, [[rideId]]);
+    await c.query("DELETE FROM ride_offers WHERE ride_id=$1", [rideId]);
+  });
+  return { name, pass, detail: `offer1 rows=${a.rowCount} err=${a.err}; offer2 rows=${b.rowCount} err=${b.err}; accepted total=${total} (expected one success and SQLSTATE 23505)` };
+}
+
 async function main(): Promise<void> {
   const results: Scenario[] = [];
   try {
@@ -350,8 +406,11 @@ async function main(): Promise<void> {
     results.push(await runScenario('4. حدث/إشعار مكرر (notification dedupe)', scenario4, ids));
     results.push(await runScenario('5. إعادة تنفيذ عملية مالية بمفتاح استidem-key مكرر (driver_ledger_entries)', scenario5, ids));
     results.push(await runScenario('6. انتهاء صلاحية العرض أثناء محاولة القبول', scenario6, ids));
+    results.push(await runScenario('7. معاملتان تنشئان رحلتين نشطتين للعميل نفسه', scenario7, ids));
+    results.push(await runScenario('8. قبول عرضين للرحلة نفسها لا يمكن أن يتجاوز القيد الفريد', scenario8, ids));
   } catch (e: any) {
     console.error('خطأ غير متوقع:', e?.message ?? e);
+    process.exitCode = 1;
   } finally {
     await pool.end();
   }
@@ -364,6 +423,9 @@ async function main(): Promise<void> {
     console.log(`   ${s.detail}`);
   }
   console.log(`\nالملخص: نجح ${passed} من ${results.length} سيناريو.`);
+  if (results.length !== 8 || passed !== results.length) {
+    process.exitCode = 1;
+  }
 }
 
 main();

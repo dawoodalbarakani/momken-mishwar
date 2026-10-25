@@ -1,0 +1,66 @@
+name: PostgreSQL concurrency integration
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'database/**'
+      - 'apps/api/src/concurrency_scenarios.ts'
+      - 'apps/api/package.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/postgres-concurrency.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'database/**'
+      - 'apps/api/src/concurrency_scenarios.ts'
+      - 'apps/api/package.json'
+      - 'package-lock.json'
+      - '.github/workflows/postgres-concurrency.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-concurrency:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: mishwar_test
+          POSTGRES_USER: mishwar
+          POSTGRES_PASSWORD: mishwar_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mishwar -d mishwar_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://mishwar:mishwar_test_only@localhost:5432/mishwar_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Install dependencies
+        run: npm ci
+      - name: Apply PostgreSQL migrations
+        run: ./database/run-migrations.sh
+      - name: Verify migrations are applied
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X -c "SELECT version, description, applied_at FROM schema_migrations ORDER BY version;"
+          test "$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X -t -A -c "SELECT count(*) FROM schema_migrations;")" -ge 2
+      - name: Run real PostgreSQL concurrency scenarios
+        run: npm --workspace @mishwar/api exec -- tsx src/concurrency_scenarios.ts

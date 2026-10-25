@@ -45,27 +45,40 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Splash / auth gate. Redirects to /home when authenticated, /login otherwise.
-class SplashScreen extends ConsumerWidget {
+/// Splash / auth gate. Initializes the session once, then routes by auth state.
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authViewModelProvider);
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!context.mounted) return;
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeSession();
+    });
+  }
+
+  Future<void> _initializeSession() async {
+    final auth = ref.read(authViewModelProvider);
+    try {
       final authenticated = await auth.initialize();
-      if (!context.mounted) return;
+      if (!mounted) return;
       if (authenticated) {
-        if (auth.isApproved) {
-          context.go('/home');
-        } else {
-          context.go('/documents');
-        }
+        context.go(auth.isApproved ? '/home' : '/documents');
       } else {
         context.go('/login');
       }
-    });
+    } catch (_) {
+      if (mounted) context.go('/login');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

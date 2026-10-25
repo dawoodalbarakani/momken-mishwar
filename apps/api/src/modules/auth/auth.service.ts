@@ -54,11 +54,20 @@ export class AuthService {
       throw new UnauthorizedException('رمز التحقق منتهي الصلاحية', 'OTP expired');
     }
 
-    // Increment attempts atomically-ish, then verify.
-    await this.prisma.otpChallenges.update({
-      where: { id: challenge.id },
-      data: { attempts: challenge.attempts + 1 },
+    // Compare-and-set the attempt counter so concurrent requests cannot reuse
+    // the same stale counter value to exceed maxAttempts.
+    const attempt = await this.prisma.otpChallenges.updateMany({
+      where: {
+        id: challenge.id,
+        consumedAt: null,
+        attempts: challenge.attempts,
+        expiresAt: { gt: new Date() },
+      },
+      data: { attempts: { increment: 1 } },
     });
+    if (attempt.count !== 1) {
+      throw new UnauthorizedException('تم استخدام الرمز أو انتهت صلاحيته', 'OTP challenge changed; request a new code');
+    }
 
     const expected = hashCode(code);
     let ok = false;
@@ -66,16 +75,17 @@ export class AuthService {
     const a = Buffer.from(expected, 'utf8');
     const b = Buffer.from(challenge.codeHash, 'utf8');
     if (a.length === b.length) {
-      let equal = true;
-      for (let i = 0; i < a.length; i++) equal = equal && a[i] === b[i];
-      ok = equal;
+      ok = crypto.timingSafeEqual(a, b);
     }
     if (!ok) throw new UnauthorizedException('رمز التحقق غير صحيح', 'Invalid OTP code');
 
-    await this.prisma.otpChallenges.update({
-      where: { id: challenge.id },
+    const consumed = await this.prisma.otpChallenges.updateMany({
+      where: { id: challenge.id, consumedAt: null },
       data: { consumedAt: new Date() },
     });
+    if (consumed.count !== 1) {
+      throw new UnauthorizedException('تم استخدام الرمز بالفعل', 'OTP challenge already consumed');
+    }
 
     let user = await this.prisma.users.findFirst({ where: { phoneE164: phone } });
     if (!user) {
@@ -126,10 +136,19 @@ export class AuthService {
     }
 
     // Rotate: revoke current, issue new family.
-    await this.prisma.refreshTokens.update({
-      where: { id: token.id },
-      data: { rotatedAt: new Date(), revokedAt: new Date(), revokedReason: 'ROTATED' },
+    const rotatedAt = new Date();
+    const rotation = await this.prisma.refreshTokens.updateMany({
+      where: {
+        id: token.id,
+        revokedAt: null,
+        rotatedAt: null,
+        expiresAt: { gt: rotatedAt },
+      },
+      data: { rotatedAt, revokedAt: rotatedAt, revokedReason: 'ROTATED' },
     });
+    if (rotation.count !== 1) {
+      throw new UnauthorizedException('توكن التجديد استُخدم بالفعل', 'Refresh token has already been used');
+    }
     const user = await this.prisma.users.findUnique({ where: { id: token.userId } });
     if (!user || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('المستخدم غير نشط', 'User not active');

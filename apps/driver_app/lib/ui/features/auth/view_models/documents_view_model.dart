@@ -58,50 +58,20 @@ class DocumentsViewModel extends ChangeNotifier {
   }
 
   Future<bool> uploadDocument(DocumentType type, String filePath) async {
-    final current = _documents[type];
-    if (current == null) return false;
-    _setDocuments({..._documents, type: current.copyWith(filePath: filePath, status: VerificationStatus.pending)});
-    final link = await getUploadLink(type);
-    if (link == null) return false;
-    final url = link['url']?.toString();
-    if (url == null || url.isEmpty) {
-      _error = 'رابط رفع غير صالح';
-      notifyListeners();
-      return false;
-    }
-    _setDocuments({..._documents, type: current.copyWith(uploadUrl: url, filePath: null, status: VerificationStatus.pending)});
-    try {
-      // Actual file upload to signed URL would happen here (needs file_picker + http).
-      final updated = DriverDocument(
-        type: type,
-        status: VerificationStatus.pending,
-        uploadUrl: url,
-        uploadedAt: DateTime.now(),
-      );
-      _setDocuments({..._documents, type: updated});
-      return true;
-    } catch (e) {
-      _error = 'فشل رفع المستند';
-      notifyListeners();
-      return false;
-    }
+    // Do not mark a document as uploaded until bytes have actually been sent
+    // to the signed URL and the upload has been confirmed by the storage service.
+    _error = 'رفع الملفات غير متاح بعد؛ لم يتم رفع المستند';
+    notifyListeners();
+    return false;
   }
 
   Future<bool> submitDocuments() async {
-    _submitting = true;
-    _error = null;
+    // The submit endpoint must not be reported as successful until the uploaded
+    // document references are sent to the backend and it confirms submission.
+    _submitting = false;
+    _error = 'إرسال المستندات غير متاح بعد؛ لم يتم إرسال أي مستند للمراجعة';
     notifyListeners();
-    try {
-      // TODO: call repository submit with collected payload
-      _submitting = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _submitting = false;
-      _error = 'فشل إرسال المستندات للمراجعة';
-      notifyListeners();
-      return false;
-    }
+    return false;
   }
 
   Future<void> refreshStatus() async {

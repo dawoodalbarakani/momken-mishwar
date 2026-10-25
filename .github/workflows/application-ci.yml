@@ -1,0 +1,145 @@
+name: Application CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'apps/api/**'
+      - 'apps/admin_web/**'
+      - 'apps/rider_app/**'
+      - 'apps/driver_app/**'
+      - 'database/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'apps/api/**'
+      - 'apps/admin_web/**'
+      - 'apps/rider_app/**'
+      - 'apps/driver_app/**'
+      - 'database/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: application-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck API
+        run: npm --workspace @mishwar/api run typecheck
+
+      - name: Run API tests
+        run: npm --workspace @mishwar/api test
+
+      - name: Build API
+        run: npm --workspace @mishwar/api run build
+
+  postgres-integration:
+    name: PostgreSQL migrations and concurrency integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: mishwar_test
+          POSTGRES_USER: mishwar
+          POSTGRES_PASSWORD: mishwar_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mishwar -d mishwar_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://mishwar:mishwar_test_only@localhost:5432/mishwar_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply database migrations
+        run: ./database/run-migrations.sh
+
+      - name: Verify migrations are applied
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X -c "SELECT version, description, applied_at FROM schema_migrations ORDER BY version;"
+          test "$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X -t -A -c "SELECT count(*) FROM schema_migrations;")" -ge 2
+
+      - name: Run real PostgreSQL concurrency integration scenarios
+        run: npm --workspace @mishwar/api exec -- tsx src/concurrency_scenarios.ts
+
+  admin-web:
+    name: Admin web checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/admin_web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin_web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck admin web
+        run: npm run typecheck
+
+      - name: Build admin web
+        run: npm run build
+
+  flutter-apks:
+    name: Flutter APK builds
+    uses: ./.github/workflows/build-flutter-apk.yml
