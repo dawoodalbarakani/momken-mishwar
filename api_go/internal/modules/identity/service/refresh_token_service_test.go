@@ -47,6 +47,12 @@ func (r *fakeRefreshRepository) Rotate(_ context.Context, oldHash string, replac
 	return old.UserID, old.FamilyID, nil
 }
 
+func (r *fakeRefreshRepository) RevokeByHash(_ context.Context, tokenHash, reason string, now time.Time) error {
+	token, ok := r.byHash[tokenHash]
+	if !ok { return domain.ErrRefreshTokenInvalid }
+	return r.RevokeFamily(context.Background(), token.FamilyID, reason, now)
+}
+
 func (r *fakeRefreshRepository) RevokeFamily(_ context.Context, familyID, reason string, now time.Time) error {
 	for hash, token := range r.byHash {
 		if token.FamilyID == familyID {
