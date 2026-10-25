@@ -55,6 +55,11 @@ The OTP service requires a pepper of at least 32 bytes, a delivery adapter, and 
 
 Do not commit secrets. Keep production database credentials in the deployment secret store. Configure TLS at the ingress, enforce request body limits and authentication/authorization on business routes, and add rate limiting before public deployment.
 
+
+### OTP-backed session orchestration
+
+`internal/modules/identity/service/session_service.go` coordinates LOGIN OTP consumption, account lookup, active/verified-phone checks, access-token issuance, and refresh-token creation. It intentionally does not auto-provision accounts. This service is not exposed through HTTP routes yet; configure real OTP delivery and a shared limiter before public deployment. See `docs/AUTH_SESSION_FLOW.md`.
+
 ## Current status
 
 Incremental scaffold plus OTP, refresh-token, and access-token service/repository primitives. The complete ride-sharing API has not yet been ported, and this scaffold is not a production replacement for the current TypeScript API. Run `go test ./...` in a Go 1.23+ environment with dependencies available before treating the code as validated.
