@@ -86,3 +86,17 @@ func (l *OTPRequestLimiter) digest(scope, value string) []byte {
 	_, _ = mac.Write([]byte(value))
 	return mac.Sum(nil)
 }
+
+
+// Cleanup removes expired rate-limit buckets. Call it from a scheduled maintenance
+// job with a cutoff older than the maximum active window.
+func (l *OTPRequestLimiter) Cleanup(ctx context.Context, before time.Time) (int64, error) {
+	if l == nil || l.db == nil {
+		return 0, ErrOTPRequestLimiterConfig
+	}
+	tag, err := l.db.Exec(ctx, `DELETE FROM otp_request_limits WHERE window_started_at < $1`, before.UTC())
+	if err != nil {
+		return 0, fmt.Errorf("clean up expired OTP rate limit buckets: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
