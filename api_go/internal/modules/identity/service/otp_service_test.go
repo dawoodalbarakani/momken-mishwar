@@ -37,7 +37,7 @@ func TestOTPRequestPersistsHashAndDeliversCode(t *testing.T) {
 	repo, delivery := &fakeOTPRepo{}, &fakeDelivery{}
 	now := time.Date(2026, 10, 25, 12, 0, 0, 0, time.UTC)
 	svc, err := NewOTPService(OTPServiceConfig{
-		Repository: repo, Delivery: delivery, Pepper: []byte("0123456789abcdef0123456789abcdef"),
+		Repository: repo, Delivery: delivery, Limiter: allowLimiter{allowed:true}, Pepper: []byte("0123456789abcdef0123456789abcdef"),
 		TTL: 5*time.Minute, MaxAttempts: 5, Now: func() time.Time { return now },
 	})
 	if err != nil { t.Fatal(err) }
