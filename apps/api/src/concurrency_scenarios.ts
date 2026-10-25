@@ -415,7 +415,7 @@ async function scenario8(ids: Ids): Promise<Scenario> {
     await c.query(cleanupRideSql, [[rideId]]);
     await c.query("DELETE FROM ride_offers WHERE ride_id=$1", [rideId]);
   });
-  return { name, pass, detail: `offer1 rows=${a.rowCount} err=${a.err}; offer2 rows=${b.rowCount} err=${b.err}; accepted total=${total} (expected one success and SQLSTATE 23505)` };
+  return { name, pass, detail: `offer1 rows=${a.rowCount} err=${a.err}; offer2 rows=${b.rowCount} err=${b.err}; accepted total=${total} (expected exactly one committed assignment and one no-op)` };
 }
 
 async function main(): Promise<void> {
