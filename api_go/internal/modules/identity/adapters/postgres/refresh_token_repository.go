@@ -84,7 +84,7 @@ func (r *RefreshTokenRepository) RevokeFamily(ctx context.Context, familyID, rea
 }
 
 // RevokeByHash revokes the family associated with a presented credential. It
-// hashes are supplied by the service; raw secrets never reach persistence.
+// The service supplies only a digest; raw secrets never reach persistence.
 func (r *RefreshTokenRepository) RevokeByHash(ctx context.Context, tokenHash, reason string, now time.Time) error {
 	if r.db == nil { return errors.New("identity refresh token repository: nil database") }
 	if tokenHash == "" || reason == "" { return errors.New("token hash and revocation reason are required") }
