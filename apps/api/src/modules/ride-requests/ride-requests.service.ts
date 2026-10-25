@@ -7,13 +7,12 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
-// Prisma 5's tagged $queryRaw typing can conflict with newer TypeScript versions.
-// Keep row typing local without supplying a generic to the generated client method.
-const queryRaw = <T>(tx: { $queryRaw: (query: TemplateStringsArray, ...values: unknown[]) => Promise<unknown> }) =>
-  (strings: TemplateStringsArray, ...values: unknown[]): Promise<T> =>
-    tx.$queryRaw(strings, ...values) as Promise<T>;
-
 import { PricingService } from '../pricing/pricing.service.js';
+
+// Keep row typing local without passing a generic to Prisma's generated raw-query method.
+const queryRaw = <T>(tx: any) =>
+  (strings: TemplateStringsArray, ...values: any[]): Promise<T> =>
+    tx.$queryRaw(strings, ...values) as Promise<T>;
 import { transition, type RideSnapshot, type Actor } from '../../domain/ride-state.js';
 
 @Injectable()
