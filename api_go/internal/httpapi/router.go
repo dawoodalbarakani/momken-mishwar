@@ -16,8 +16,13 @@ type API struct {
 }
 
 func New(logger *slog.Logger, db *pgxpool.Pool) http.Handler {
+	return NewWithAuth(logger, db, nil)
+}
+
+func NewWithAuth(logger *slog.Logger, db *pgxpool.Pool, auth *AuthHandlers) http.Handler {
 	api := &API{logger: logger, db: db}
 	mux := http.NewServeMux()
+	if auth != nil { auth.Register(mux) }
 	mux.HandleFunc("GET /health/live", api.live)
 	mux.HandleFunc("GET /health/ready", api.ready)
 	mux.HandleFunc("GET /api/v1", api.index)
