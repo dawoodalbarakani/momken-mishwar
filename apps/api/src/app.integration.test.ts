@@ -17,8 +17,8 @@ describe('Mishwar API Integration (mishwar_test)', () => {
   });
 
   afterAll(async () => {
-    await prisma.$disconnect();
-    await app.close();
+    if (prisma) await prisma.$disconnect();
+    if (app) await app.close();
   });
 
   it('تحتوي mishwar_test على منطقة صنعاء', async () => {
