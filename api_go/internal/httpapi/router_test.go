@@ -1,11 +1,11 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -14,9 +14,14 @@ func TestLivenessEndpoint(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/health/live", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK { t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK) }
-	if !strings.Contains(rec.Body.String(), "`status`:`ok`") && !strings.Contains(rec.Body.String(), "`status`") {
-		// JSON response is validated below without depending on key ordering.
-		if !strings.Contains(rec.Body.String(), "\"status\":\"ok\"") { t.Fatalf("unexpected body: %s", rec.Body.String()) }
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body["status"] != "ok" || body["service"] != "api_go" {
+		t.Fatalf("unexpected response: %#v", body)
 	}
 }
