@@ -36,11 +36,14 @@ go run ./cmd/api
 The identity foundations are under `internal/modules/identity`:
 
 - `domain`: user roles/status and OTP challenge lifecycle invariants.
-- `ports`: user and OTP repository interfaces.
-- `adapters/postgres`: user/role lookups and OTP persistence/verification against the existing schema.
-- `service`: cryptographically random six-digit OTP generation, keyed HMAC-SHA256 storage/verification, challenge expiry, and required rate-limiter/delivery interfaces. Unit tests cover service boundaries.
+- `ports`: repository interfaces for users, OTP challenges, and refresh tokens.
+- `adapters/postgres`: user/role lookups, OTP persistence and row-locked verification, refresh-token rotation/revocation, and a shared PostgreSQL fixed-window OTP request limiter.
+- `service`: cryptographically random six-digit OTP generation, keyed HMAC-SHA256 challenge storage/verification, access-token issuance/verification, session login/refresh, and refresh-token family revocation.
+- `internal/httpapi/auth_handlers.go`: OTP request, OTP login, refresh, and logout handlers with strict JSON decoding and bounded request bodies.
 
-The OTP service requires a pepper of at least 32 bytes, a delivery adapter, and a rate limiter; it persists only keyed hashes and never returns the generated code to the API caller. Production must use a shared/distributed limiter, a real SMS/voice provider, and secrets from the deployment secret store. OTP request/verify HTTP endpoints, user provisioning/phone-verification orchestration, role/permission policy enforcement and HTTP authentication endpoints are not implemented. Bearer-token middleware exists as a reusable primitive but is not attached to application routes yet. The access-token issuer/verifier is a service primitive and is not yet wired into the HTTP server. Refresh-token lifecycle primitives now exist, but have not been integrated into an HTTP authentication flow. Do not treat these building blocks as a complete authentication system.
+The shared OTP limiter is implemented in `adapters/postgres/otp_request_limiter.go`; it enforces separate phone and IP quotas transactionally across API instances. It stores HMAC digests of scope identifiers rather than raw phone/IP values. Apply `database/migrations/0002_otp_request_limits.sql` before using it. Supply a dedicated random limiter key of at least 32 bytes, distinct from the OTP challenge pepper and JWT signing key. The rate-limit table requires periodic retention cleanup; schedule deletion of rows whose `window_started_at` is older than your retention window.
+
+The HTTP handlers and service building blocks are not yet wired into `cmd/api/main.go`. Production activation still requires a real SMS/voice delivery adapter, secrets from the deployment secret store, limiter configuration, and integration/contract tests. Do not expose OTP endpoints publicly until the real delivery provider and shared limiter are configured. Account provisioning and phone-verification workflows also require explicit product policy. Do not treat this scaffold as a production replacement for the existing TypeScript API.
 
 ## Integration plan
 
