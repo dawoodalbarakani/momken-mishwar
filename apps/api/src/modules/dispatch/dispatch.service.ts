@@ -1,16 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
-// Prisma 5's tagged $queryRaw typing can conflict with newer TypeScript versions.
-// Keep row typing local without supplying a generic to the generated client method.
 import { transition, type RideSnapshot, type Actor } from '../../domain/ride-state.js';
-import { newStartCodeNonce } from '../../domain/start-code.js';
 
-
-// Preserve row typing without generic arguments on Prisma's generated raw-query method.
+// Keep row typing local without passing a generic to Prisma's generated raw-query method.
 const queryRaw = <T>(tx: any) =>
   (strings: TemplateStringsArray, ...values: any[]): Promise<T> =>
     tx.$queryRaw(strings, ...values) as Promise<T>;
+import { newStartCodeNonce } from '../../domain/start-code.js';
 
 @Injectable()
 export class DispatchService {
