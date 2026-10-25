@@ -1,16 +1,26 @@
+import 'dart:io' show Platform;
 
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 class AppConstants {
   AppConstants._();
 
+  static String _env(String key, String fallback) {
+    if (kIsWeb) return fallback;
+    try {
+      return Platform.environment[key] ?? fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   static String get apiBaseUrl {
-    return Platform.environment['MISHWAR_API_BASE_URL'] ?? 'http://10.0.2.2:4000';
+    return _env('MISHWAR_API_BASE_URL', 'http://10.0.2.2:4000');
   }
 
   static String get wsBaseUrl {
-    return Platform.environment['MISHWAR_WS_BASE_URL'] ?? 'ws://10.0.2.2:4000';
+    return _env('MISHWAR_WS_BASE_URL', 'ws://10.0.2.2:4000');
   }
 
   static const Duration connectTimeout = Duration(seconds: 15);
@@ -26,6 +36,6 @@ class AppConstants {
   static const int otpLength = 6;
 
   static String get mapApiKey {
-    return Platform.environment['MISHWAR_MAP_API_KEY'] ?? '';
+    return _env('MISHWAR_MAP_API_KEY', '');
   }
 }
