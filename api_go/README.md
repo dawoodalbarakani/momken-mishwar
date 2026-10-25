@@ -13,6 +13,7 @@ This directory starts a Go implementation alongside the existing API. It does no
 - PostgreSQL user repository against the existing `users` and `user_roles` tables.
 - OTP repository against the existing `otp_challenges` table, including row-locked verification, persisted attempt increments, constant-time hash comparison, and one-time consumption.
 - Refresh-token repository and service using opaque high-entropy secrets, SHA-256 digests at rest, transactional rotation, and family revocation on token reuse.
+- Access-token service that issues and verifies short-lived HS256 JWTs with issuer/audience checks, expiration, and user-role claims.
 
 ## Run locally
 
@@ -38,7 +39,7 @@ The identity foundations are under `internal/modules/identity`:
 - `adapters/postgres`: user/role lookups and OTP persistence/verification against the existing schema.
 - `service`: cryptographically random six-digit OTP generation, keyed HMAC-SHA256 storage/verification, challenge expiry, and required rate-limiter/delivery interfaces. Unit tests cover service boundaries.
 
-The OTP service requires a pepper of at least 32 bytes, a delivery adapter, and a rate limiter; it persists only keyed hashes and never returns the generated code to the API caller. Production must use a shared/distributed limiter, a real SMS/voice provider, and secrets from the deployment secret store. OTP request/verify HTTP endpoints, user provisioning/phone-verification orchestration, access-token issuance, and authorization middleware are not implemented. Refresh-token lifecycle primitives now exist, but have not been integrated into an HTTP authentication flow. Do not treat these building blocks as a complete authentication system.
+The OTP service requires a pepper of at least 32 bytes, a delivery adapter, and a rate limiter; it persists only keyed hashes and never returns the generated code to the API caller. Production must use a shared/distributed limiter, a real SMS/voice provider, and secrets from the deployment secret store. OTP request/verify HTTP endpoints, user provisioning/phone-verification orchestration, authorization middleware, and HTTP authentication endpoints are not implemented. The access-token issuer/verifier is a service primitive and is not yet wired into the HTTP server. Refresh-token lifecycle primitives now exist, but have not been integrated into an HTTP authentication flow. Do not treat these building blocks as a complete authentication system.
 
 ## Integration plan
 
@@ -55,4 +56,4 @@ Do not commit secrets. Keep production database credentials in the deployment se
 
 ## Current status
 
-Incremental scaffold plus OTP and refresh-token service/repository primitives. The complete ride-sharing API has not yet been ported, and this scaffold is not a production replacement for the current TypeScript API. Run `go test ./...` in a Go 1.23+ environment with dependencies available before treating the code as validated.
+Incremental scaffold plus OTP, refresh-token, and access-token service/repository primitives. The complete ride-sharing API has not yet been ported, and this scaffold is not a production replacement for the current TypeScript API. Run `go test ./...` in a Go 1.23+ environment with dependencies available before treating the code as validated.
