@@ -1,5 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
+
+// Prisma 5's tagged $queryRaw typing can conflict with newer TypeScript versions.
+// Keep row typing local without supplying a generic to the generated client method.
+const queryRaw = <T>(tx: { $queryRaw: (query: TemplateStringsArray, ...values: unknown[]) => Promise<unknown> }) =>
+  (strings: TemplateStringsArray, ...values: unknown[]): Promise<T> =>
+    tx.$queryRaw(strings, ...values) as Promise<T>;
+
 import { transition, type RideSnapshot, type Actor } from '../../domain/ride-state.js';
 import { newStartCodeNonce } from '../../domain/start-code.js';
 
@@ -9,7 +16,7 @@ export class DispatchService {
 
   async search(rideId: string) {
     return this.prisma.tx(async (tx) => {
-      const [ride] = await tx.$queryRaw<any[]>`SELECT * FROM rides WHERE id = ${rideId} FOR UPDATE`;
+      const [ride] = await queryRaw<any[]>`SELECT * FROM rides WHERE id = ${rideId} FOR UPDATE`;
       if (!ride) throw new NotFoundException('الرحلة غير موجودة', 'Ride not found');
       if (ride.status !== 'SEARCHING' || ride.driver_id !== null) {
         throw new BadRequestException('الرحلة ليست في حالة بحث', 'Ride is not searching');
@@ -21,7 +28,7 @@ export class DispatchService {
         where: { rideId, status: 'PENDING', expiresAt: { gt: new Date() } },
         orderBy: { offeredAt: 'asc' },
       });
-      if (existing.length > 0) {
+      if (existing.length >(tx) 0) {
         return { rideId, offers: existing, expiresAt: existing.reduce((latest, o) => o.expiresAt > latest ? o.expiresAt : latest, existing[0].expiresAt), replayed: true };
       }
       await tx.rideOffers.updateMany({
@@ -32,13 +39,13 @@ export class DispatchService {
       const settings = await tx.dispatchSettings.findUnique({ where: { serviceAreaId: ride.service_area_id } });
       if (!settings) throw new BadRequestException('لا توجد إعدادات إسناد لهذه المنطقة', 'No dispatch settings for area');
 
-      const [pickup] = await tx.$queryRaw<Array<{ lon: number; lat: number }>>`
+      const [pickup] = await queryRaw<Array<{ lon: number; lat: number }>>(tx)`
         SELECT ST_X(pickup::geometry) AS lon, ST_Y(pickup::geometry) AS lat
         FROM rides WHERE id = ${rideId}`;
       const pickupLon = Number(pickup?.lon);
       const pickupLat = Number(pickup?.lat);
 
-      const candidates = await tx.$queryRaw<Array<{ driver_id: string; distance_m: number }>>`
+      const candidates = await queryRaw<Array<{ driver_id: string; distance_m: number }>>(tx)`
         SELECT dp.user_id AS driver_id,
                ST_Distance(dp.last_location,
                  ST_SetSRID(ST_MakePoint(${pickupLon}, ${pickupLat})::geometry, 4326)::geography) AS distance_m
@@ -91,17 +98,17 @@ export class DispatchService {
       // Discover the ride id without locking the offer, then always lock in the
       // same order: ride -> offer -> driver. This avoids the deadlock where two
       // acceptors each lock a different offer and then cancel each other's row.
-      const [offerRef] = await tx.$queryRaw<Array<{ ride_id: string }>>`
+      const [offerRef] = await queryRaw<Array<{ ride_id: string }>>(tx)`
         SELECT ride_id FROM ride_offers WHERE id = ${params.offerId} AND driver_id = ${params.driverId}`;
       if (!offerRef) throw new BadRequestException('العرض غير متاح للقبول', 'Offer not available');
 
-      const [ride] = await tx.$queryRaw<any[]>`
+      const [ride] = await queryRaw<any[]>`
         SELECT * FROM rides WHERE id = ${offerRef.ride_id} FOR UPDATE`;
       if (!ride || ride.status !== 'SEARCHING' || ride.driver_id !== null) {
         throw new ConflictException('الرحلة لم تعد متاحة للإسناد', 'Ride is no longer assignable');
       }
 
-      const [offer] = await tx.$queryRaw<any[]>`
+      const [offer] = await tx.$queryRaw<any[]>(tx)`
         SELECT * FROM ride_offers
         WHERE id = ${params.offerId} AND driver_id = ${params.driverId}
         FOR UPDATE`;
@@ -114,7 +121,7 @@ export class DispatchService {
       }
 
       // Serialize all acceptances by the same driver, even across different rides.
-      const [driverRow] = await tx.$queryRaw<any[]>`
+      const [driverRow] = await queryRaw<any[]>`
         SELECT dp.verification_status, dp.is_online, dp.service_area_id, u.status
         FROM driver_profiles dp
         JOIN users u ON u.id = dp.user_id
@@ -129,7 +136,7 @@ export class DispatchService {
         throw new BadRequestException('السائق خارج منطقة خدمة الرحلة', 'Driver outside ride service area');
       }
 
-      const activeRides = await tx.$queryRaw<Array<{ id: string }>>`
+      const activeRides = await tx.$queryRaw<Array<{ id: string }>(tx)>`
         SELECT id FROM rides
         WHERE driver_id = ${params.driverId}
           AND status IN ('ASSIGNED','ARRIVING','ARRIVED','IN_PROGRESS')
@@ -138,7 +145,7 @@ export class DispatchService {
         throw new ConflictException('لدى السائق رحلة نشطة بالفعل', 'Driver already has an active ride');
       }
 
-      const [vehicle] = await tx.$queryRaw<any[]>`
+      const [vehicle] = await queryRaw<any[]>`
         SELECT id FROM vehicles
         WHERE id = ${params.vehicleId}
           AND driver_id = ${params.driverId}
@@ -152,7 +159,7 @@ export class DispatchService {
       const nonce = newStartCodeNonce();
       const startCodeExpiresAt = new Date(now.getTime() + ttlMinutes * 60 * 1000);
 
-      const [assigned] = await tx.$queryRaw<any[]>`
+      const [assigned] = await tx.$queryRaw<any[]>(tx)`
         UPDATE rides
         SET status = 'ASSIGNED',
             driver_id = ${params.driverId},
