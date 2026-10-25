@@ -21,9 +21,14 @@ type SessionLogin interface {
 	Login(ctx context.Context, phoneE164, code string, deviceID *string) (service.LoginSession, error)
 }
 
+type SessionRefresher interface {
+	Refresh(ctx context.Context, rawToken string, deviceID *string) (service.RefreshSessionResult, error)
+}
+
 type AuthHandlers struct {
 	OTP OTPRequester
 	Sessions SessionLogin
+	RefreshSessions SessionRefresher
 }
 
 type otpRequest struct {
@@ -36,9 +41,15 @@ type loginRequest struct {
 	DeviceID *string `json:"device_id,omitempty"`
 }
 
+type refreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
+	DeviceID *string `json:"device_id,omitempty"`
+}
+
 func (h AuthHandlers) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/auth/otp/request", h.requestOTP)
 	mux.HandleFunc("POST /api/v1/auth/otp/verify", h.login)
+	mux.HandleFunc("POST /api/v1/auth/refresh", h.refresh)
 }
 
 func (h AuthHandlers) requestOTP(w http.ResponseWriter, r *http.Request) {
@@ -140,4 +151,22 @@ func clientIP(r *http.Request) string {
 		return host
 	}
 	return r.RemoteAddr
+}
+
+func (h AuthHandlers) refresh(w http.ResponseWriter, r *http.Request) {
+	if h.RefreshSessions == nil { writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error":"authentication_unavailable"}); return }
+	var input refreshRequest
+	if err := decodeJSON(w, r, &input); err != nil { writeJSON(w, http.StatusBadRequest, map[string]string{"error":"invalid_request"}); return }
+	input.RefreshToken = strings.TrimSpace(input.RefreshToken)
+	if input.RefreshToken == "" || len(input.RefreshToken) > 512 { writeJSON(w, http.StatusBadRequest, map[string]string{"error":"invalid_request"}); return }
+	if input.DeviceID != nil { device := strings.TrimSpace(*input.DeviceID); if device == "" || len(device) > 128 { writeJSON(w, http.StatusBadRequest, map[string]string{"error":"invalid_request"}); return }; input.DeviceID = &device }
+	session, err := h.RefreshSessions.Refresh(r.Context(), input.RefreshToken, input.DeviceID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrUserInactive): writeJSON(w, http.StatusForbidden, map[string]string{"error":"account_unavailable"})
+		case errors.Is(err, domain.ErrRefreshTokenInvalid), errors.Is(err, domain.ErrRefreshTokenExpired), errors.Is(err, domain.ErrRefreshTokenReuse): writeJSON(w, http.StatusUnauthorized, map[string]string{"error":"invalid_refresh_token"})
+		default: writeJSON(w, http.StatusInternalServerError, map[string]string{"error":"authentication_failed"})
+		}; return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"access_token":session.AccessToken,"token_type":"Bearer","expires_at":session.AccessTokenExpiresAt,"refresh_token":session.RefreshToken,"refresh_expires_at":session.RefreshTokenExpiresAt,"user":map[string]any{"id":session.User.ID,"phone_e164":session.User.PhoneE164,"display_name":session.User.DisplayName,"locale":session.User.Locale,"roles":session.User.Roles}})
 }
