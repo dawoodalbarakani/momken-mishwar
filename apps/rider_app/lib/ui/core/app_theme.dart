@@ -97,7 +97,7 @@ ThemeData appTheme() => ThemeData(
     labelStyle: const TextStyle(color: UberColors.bodyGray, fontSize: 14),
     hintStyle: const TextStyle(color: UberColors.mutedGray, fontSize: 14),
   ),
-  cardTheme: CardTheme(
+  cardTheme: CardThemeData(
     color: UberColors.white,
     elevation: 0,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -129,7 +129,7 @@ ThemeData appTheme() => ThemeData(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     behavior: SnackBarBehavior.floating,
   ),
-  dialogTheme: DialogTheme(
+  dialogTheme: DialogThemeData(
     backgroundColor: UberColors.white,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     titleTextStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: UberColors.black),
