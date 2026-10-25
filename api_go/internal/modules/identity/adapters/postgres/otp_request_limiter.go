@@ -18,18 +18,24 @@ var ErrOTPRequestLimiterConfig = errors.New("OTP request limiter is not configur
 // OTPRequestLimiter stores fixed-window counters in PostgreSQL so limits apply
 // across API instances. The HMAC key must be a separate deployment secret.
 type OTPRequestLimiter struct {
-	db *pgxpool.Pool
-	key []byte
-	window time.Duration
+	db         *pgxpool.Pool
+	key        []byte
+	window     time.Duration
 	phoneLimit int
-	ipLimit int
+	ipLimit    int
 }
 
 func NewOTPRequestLimiter(db *pgxpool.Pool, key []byte, window time.Duration, phoneLimit, ipLimit int) (*OTPRequestLimiter, error) {
 	if db == nil || len(key) < 32 || window <= 0 || phoneLimit <= 0 || ipLimit <= 0 {
 		return nil, ErrOTPRequestLimiterConfig
 	}
-	return &OTPRequestLimiter{db: db, key: append([]byte(nil), key...), window: window, phoneLimit: phoneLimit, ipLimit: ipLimit}, nil
+	return &OTPRequestLimiter{
+		db:         db,
+		key:        append([]byte(nil), key...),
+		window:     window,
+		phoneLimit: phoneLimit,
+		ipLimit:    ipLimit,
+	}, nil
 }
 
 // Allow atomically reserves one request in both the phone and IP buckets.
@@ -43,18 +49,26 @@ func (l *OTPRequestLimiter) Allow(ctx context.Context, phoneE164, clientIP strin
 		return false, errors.New("phone is required for OTP rate limiting")
 	}
 	windowStart := time.Unix(0, (now.UTC().UnixNano()/int64(l.window))*int64(l.window)).UTC()
-	type bucket struct { scope string; digest []byte; limit int }
+	type bucket struct {
+		scope  string
+		digest []byte
+		limit  int
+	}
 	buckets := []bucket{{scope: "PHONE", digest: l.digest("PHONE", phoneE164), limit: l.phoneLimit}}
 	if clientIP != "" {
 		buckets = append(buckets, bucket{scope: "IP", digest: l.digest("IP", clientIP), limit: l.ipLimit})
 	}
 	sort.Slice(buckets, func(i, j int) bool {
-		if buckets[i].scope != buckets[j].scope { return buckets[i].scope < buckets[j].scope }
+		if buckets[i].scope != buckets[j].scope {
+			return buckets[i].scope < buckets[j].scope
+		}
 		return string(buckets[i].digest) < string(buckets[j].digest)
 	})
 
 	tx, err := l.db.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil { return false, fmt.Errorf("begin OTP rate limit transaction: %w", err) }
+	if err != nil {
+		return false, fmt.Errorf("begin OTP rate limit transaction: %w", err)
+	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	for _, b := range buckets {
 		var count int
@@ -73,9 +87,13 @@ func (l *OTPRequestLimiter) Allow(ctx context.Context, phoneE164, clientIP strin
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
-		if err != nil { return false, fmt.Errorf("reserve OTP %s rate limit: %w", b.scope, err) }
+		if err != nil {
+			return false, fmt.Errorf("reserve OTP %s rate limit: %w", b.scope, err)
+		}
 	}
-	if err := tx.Commit(ctx); err != nil { return false, fmt.Errorf("commit OTP rate limit transaction: %w", err) }
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit OTP rate limit transaction: %w", err)
+	}
 	return true, nil
 }
 
@@ -86,7 +104,6 @@ func (l *OTPRequestLimiter) digest(scope, value string) []byte {
 	_, _ = mac.Write([]byte(value))
 	return mac.Sum(nil)
 }
-
 
 // Cleanup removes expired rate-limit buckets. Call it from a scheduled maintenance
 // job with a cutoff older than the maximum active window.
