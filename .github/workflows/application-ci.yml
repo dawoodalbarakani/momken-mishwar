@@ -56,6 +56,10 @@ jobs:
         run: npm --workspace @mishwar/api run typecheck
 
       - name: Run API tests
+        env:
+          JWT_ACCESS_SECRET: test-only-access-secret-32-bytes-minimum-0001
+          JWT_REFRESH_SECRET: test-only-refresh-secret-32-bytes-minimum-0002
+          START_CODE_SECRET: test-only-start-code-secret-32-bytes-minimum-0003
         run: npm --workspace @mishwar/api test
 
       - name: Build API
