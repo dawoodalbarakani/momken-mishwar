@@ -1,13 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
-
 import { transition, type RideSnapshot, type Actor } from '../../domain/ride-state.js';
+import { newStartCodeNonce } from '../../domain/start-code.js';
 
 // Keep row typing local without passing a generic to Prisma's generated raw-query method.
 const queryRaw = <T>(tx: any) =>
   (strings: TemplateStringsArray, ...values: any[]): Promise<T> =>
     tx.$queryRaw(strings, ...values) as Promise<T>;
-import { newStartCodeNonce } from '../../domain/start-code.js';
 
 @Injectable()
 export class DispatchService {
