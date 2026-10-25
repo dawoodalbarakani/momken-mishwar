@@ -52,7 +52,6 @@ func (h AuthHandlers) requestOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.OTP.Request(r.Context(), strings.TrimSpace(input.PhoneE164), clientIP(r), domain.OTPPurposeLogin); err != nil {
-		var limited error
 		if errors.Is(err, service.ErrOTPRequestLimited) {
 			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error":"try_again_later"})
 			return
