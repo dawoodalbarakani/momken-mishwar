@@ -9,7 +9,9 @@ This directory starts a Go implementation alongside the existing API. It does no
 - Liveness and readiness endpoints.
 - JSON panic recovery and a versioned API entrypoint.
 - Environment-based configuration and a minimal container image.
-- Initial identity domain types, OTP challenge lifecycle rules, and a PostgreSQL user repository adapter.
+- Identity domain types for user roles/status and OTP challenge lifecycle rules.
+- PostgreSQL user repository against the existing `users` and `user_roles` tables.
+- OTP repository against the existing `otp_challenges` table, including row-locked verification, persisted attempt increments, constant-time hash comparison, and one-time consumption.
 
 ## Run locally
 
@@ -28,21 +30,21 @@ go run ./cmd/api
 
 ## Identity module status
 
-The first identity building blocks are present under `internal/modules/identity`:
+The identity foundations are under `internal/modules/identity`:
 
 - `domain`: user roles/status and OTP challenge lifecycle invariants.
-- `ports`: user repository interface.
-- `adapters/postgres`: lookups against the existing `users` and `user_roles` tables.
+- `ports`: user and OTP repository interfaces.
+- `adapters/postgres`: user/role lookups and OTP persistence/verification against the existing schema.
 
-OTP delivery, OTP persistence/atomic attempt increments, token issuance/rotation, auth HTTP endpoints, and authorization middleware are not implemented yet. Do not treat these building blocks as a complete authentication system.
+The OTP repository accepts only hashes for persisted and candidate codes. The caller still needs a reviewed OTP generation/hash strategy, delivery integration, phone normalization, and request rate limits. Access-token issuance, refresh-token rotation/reuse detection, auth HTTP endpoints, and authorization middleware are not implemented. Do not treat these building blocks as a complete authentication system.
 
 ## Integration plan
 
 1. Keep `database/migrations/` as the schema source of truth; do not create divergent tables.
 2. Review `apps/api/src/domain/`, API docs, and existing handlers before porting each business operation.
-3. Add domain packages and contract tests for money (integer minor units), pricing, ride state transitions, start-code verification, ledger invariants, and dispatch.
-4. Use PostgreSQL transactions and conditional updates for offer acceptance and ride transitions. Never trust client-provided fare or driver identity.
-5. Complete auth/OTP/JWT and refresh-token rotation to match the existing API contract.
+3. Finish OTP request/verify orchestration and refresh-token lifecycle to match the existing API contract.
+4. Add domain packages and contract tests for money (integer minor units), pricing, ride state transitions, start-code verification, ledger invariants, and dispatch.
+5. Use PostgreSQL transactions and conditional updates for offer acceptance and ride transitions. Never trust client-provided fare or driver identity.
 6. Add WebSocket events only after documenting payload compatibility with both Flutter clients.
 
 ## Security
@@ -51,4 +53,4 @@ Do not commit secrets. Keep production database credentials in the deployment se
 
 ## Current status
 
-Incremental scaffold plus initial identity domain/repository code. The complete ride-sharing API has not yet been ported, and this scaffold is not a production replacement for the current TypeScript API. Run `go test ./...` in a Go 1.23+ environment with dependencies available before treating the code as validated.
+Incremental scaffold plus initial identity persistence primitives. The complete ride-sharing API has not yet been ported, and this scaffold is not a production replacement for the current TypeScript API. Run `go test ./...` in a Go 1.23+ environment with dependencies available before treating the code as validated.
