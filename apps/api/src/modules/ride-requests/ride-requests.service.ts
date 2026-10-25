@@ -6,6 +6,13 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
+
+// Prisma 5's tagged $queryRaw typing can conflict with newer TypeScript versions.
+// Keep row typing local without supplying a generic to the generated client method.
+const queryRaw = <T>(tx: { $queryRaw: (query: TemplateStringsArray, ...values: unknown[]) => Promise<unknown> }) =>
+  (strings: TemplateStringsArray, ...values: unknown[]): Promise<T> =>
+    tx.$queryRaw(strings, ...values) as Promise<T>;
+
 import { PricingService } from '../pricing/pricing.service.js';
 import { transition, type RideSnapshot, type Actor } from '../../domain/ride-state.js';
 
@@ -35,7 +42,7 @@ export class RideRequestsService {
     return this.prisma.tx(async (tx) => {
       // Serialize ride creation for this customer across API instances. The DB also
       // has a partial unique index on active rides as a final integrity boundary.
-      const customer = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM users WHERE id = ${params.customerId} FOR UPDATE`;
+      const customer = await queryRaw<Array<{ id: string }>>(tx)`SELECT id FROM users WHERE id = ${params.customerId} FOR UPDATE`;
       if (customer.length === 0) throw new NotFoundException('المستخدم غير موجود', 'Customer not found');
 
       const existing = await tx.idempotencyKeys.findUnique({
@@ -72,7 +79,7 @@ export class RideRequestsService {
 
       // Insert and capture the exact generated id in the same statement; never
       // select "the latest SEARCHING ride", which can belong to another request.
-      const [rideIdRow] = await tx.$queryRaw<Array<{ id: string }>>`
+      const [rideIdRow] = await queryRaw<Array<{ id: string }>>(tx)`
         INSERT INTO rides (
           id, customer_id, service_area_id, vehicle_type_id, status, pickup, destination,
           currency_code, pricing_rule_id, pricing_rule_version, price_breakdown,
