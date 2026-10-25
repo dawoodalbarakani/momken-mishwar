@@ -33,7 +33,6 @@ func (r *RefreshTokenRepository) Create(ctx context.Context, token domain.Refres
 func (r *RefreshTokenRepository) Rotate(ctx context.Context, oldHash string, replacement domain.RefreshToken, now time.Time) (string, error) {
 	if r.db == nil { return "", errors.New("identity refresh token repository: nil database") }
 	if oldHash == "" { return "", domain.ErrRefreshTokenInvalid }
-	if err := replacement.Validate(); err != nil { return "", err }
 	tx, err := r.db.Begin(ctx)
 	if err != nil { return "", fmt.Errorf("begin refresh rotation: %w", err) }
 	defer func() { _ = tx.Rollback(ctx) }()
@@ -59,9 +58,9 @@ func (r *RefreshTokenRepository) Rotate(ctx context.Context, oldHash string, rep
 	if !expiresAt.After(now) {
 		return "", domain.ErrRefreshTokenExpired
 	}
-	if replacement.UserID != userID || replacement.FamilyID != familyID {
-		return "", errors.New("refresh replacement does not match token family")
-	}
+	replacement.UserID = userID
+	replacement.FamilyID = familyID
+	if err := replacement.Validate(); err != nil { return "", err }
 	_, err = tx.Exec(ctx, `UPDATE refresh_tokens SET rotated_at = $2 WHERE token_hash = $1 AND rotated_at IS NULL AND revoked_at IS NULL`, oldHash, now)
 	if err != nil { return "", fmt.Errorf("mark refresh token rotated: %w", err) }
 	_, err = tx.Exec(ctx, `
