@@ -35,8 +35,9 @@ The identity foundations are under `internal/modules/identity`:
 - `domain`: user roles/status and OTP challenge lifecycle invariants.
 - `ports`: user and OTP repository interfaces.
 - `adapters/postgres`: user/role lookups and OTP persistence/verification against the existing schema.
+- `service`: cryptographically random six-digit OTP generation, keyed HMAC-SHA256 storage/verification, challenge expiry, and required rate-limiter/delivery interfaces. Unit tests cover service boundaries.
 
-The OTP repository accepts only hashes for persisted and candidate codes. The caller still needs a reviewed OTP generation/hash strategy, delivery integration, phone normalization, and request rate limits. Access-token issuance, refresh-token rotation/reuse detection, auth HTTP endpoints, and authorization middleware are not implemented. Do not treat these building blocks as a complete authentication system.
+The OTP service requires a pepper of at least 32 bytes, a delivery adapter, and a rate limiter; it persists only keyed hashes and never returns the generated code to the API caller. Production must use a shared/distributed limiter, a real SMS/voice provider, and secrets from the deployment secret store. OTP request/verify HTTP endpoints, user provisioning/phone-verification orchestration, access-token issuance, refresh-token rotation/reuse detection, and authorization middleware are not implemented. Do not treat these building blocks as a complete authentication system.
 
 ## Integration plan
 
@@ -53,4 +54,4 @@ Do not commit secrets. Keep production database credentials in the deployment se
 
 ## Current status
 
-Incremental scaffold plus initial identity persistence primitives. The complete ride-sharing API has not yet been ported, and this scaffold is not a production replacement for the current TypeScript API. Run `go test ./...` in a Go 1.23+ environment with dependencies available before treating the code as validated.
+Incremental scaffold plus OTP service/repository primitives. The complete ride-sharing API has not yet been ported, and this scaffold is not a production replacement for the current TypeScript API. Run `go test ./...` in a Go 1.23+ environment with dependencies available before treating the code as validated.
