@@ -199,7 +199,7 @@ func (h AuthHandlers) logout(w http.ResponseWriter, r *http.Request) {
 	if err := h.RefreshTokens.Revoke(r.Context(), input.RefreshToken, "LOGOUT"); err != nil {
 		if errors.Is(err, domain.ErrRefreshTokenInvalid) {
 			// Idempotent logout avoids revealing whether a credential ever existed.
-			writeJSON(w, http.StatusNoContent, nil)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error":"logout_failed"})
