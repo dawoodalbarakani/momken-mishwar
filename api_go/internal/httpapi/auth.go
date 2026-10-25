@@ -33,7 +33,7 @@ func RequireAccessToken(tokens *service.AccessTokenService, next http.Handler) h
 		}
 		claims, err := tokens.Verify(parts[1])
 		if err != nil {
-			w.Header().Set("WWW-Authenticate", "Bearer error="invalid_token"")
+			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error":"unauthorized"})
 			return
 		}
