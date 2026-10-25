@@ -50,7 +50,7 @@ func TestOTPRequestPersistsHashAndDeliversCode(t *testing.T) {
 
 func TestOTPRequestRejectsInvalidPhoneBeforeSideEffects(t *testing.T) {
 	repo, delivery := &fakeOTPRepo{}, &fakeDelivery{}
-	svc, err := NewOTPService(OTPServiceConfig{Repository: repo, Delivery: delivery, Pepper: []byte("0123456789abcdef0123456789abcdef"), TTL: time.Minute, MaxAttempts: 3})
+	svc, err := NewOTPService(OTPServiceConfig{Repository: repo, Delivery: delivery, Limiter: allowLimiter{allowed:true}, Pepper: []byte("0123456789abcdef0123456789abcdef"), TTL: time.Minute, MaxAttempts: 3})
 	if err != nil { t.Fatal(err) }
 	if err := svc.Request(context.Background(), "0771234567", "", domain.OTPPurposeLogin); !errors.Is(err, ErrInvalidPhone) { t.Fatalf("error = %v", err) }
 	if repo.created.ID != "" || delivery.code != "" { t.Fatal("invalid phone caused side effects") }
