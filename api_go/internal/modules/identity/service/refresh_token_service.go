@@ -100,3 +100,11 @@ func (s *RefreshTokenService) RevokeFamily(ctx context.Context, familyID, reason
 	}
 	return s.repository.RevokeFamily(ctx, familyID, reason, s.now().UTC())
 }
+
+// Revoke invalidates the complete family identified by a presented refresh token.
+// Only the token digest is passed to the repository.
+func (s *RefreshTokenService) Revoke(ctx context.Context, rawToken, reason string) error {
+	if rawToken == "" { return domain.ErrRefreshTokenInvalid }
+	if reason == "" { reason = "LOGOUT" }
+	return s.repository.RevokeByHash(ctx, hashRefreshSecret(rawToken), reason, s.now().UTC())
+}
