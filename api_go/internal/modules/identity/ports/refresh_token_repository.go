@@ -13,4 +13,5 @@ type RefreshTokenRepository interface {
 	// A reused rotated token revokes its entire family before returning ErrRefreshTokenReuse.
 	Rotate(ctx context.Context, oldHash string, replacement domain.RefreshToken, now time.Time) (userID, familyID string, err error)
 	RevokeFamily(ctx context.Context, familyID, reason string, now time.Time) error
+	RevokeByHash(ctx context.Context, tokenHash, reason string, now time.Time) error
 }
