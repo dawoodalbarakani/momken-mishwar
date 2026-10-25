@@ -42,3 +42,14 @@ func TestOTPRequestLimiterDigestIsScopedAndDoesNotContainInput(t *testing.T) {
 	if bytes.Contains(a, []byte(phone)) { t.Fatal("digest must not contain the raw phone value") }
 	if len(a) != 32 { t.Fatalf("digest length = %d, want 32", len(a)) }
 }
+
+
+func TestOTPRequestLimiterCleanupRejectsMissingDatabase(t *testing.T) {
+	var limiter *OTPRequestLimiter
+	if _, err := limiter.Cleanup(t.Context(), time.Now()); err == nil {
+		t.Fatal("expected missing limiter configuration error")
+	}
+	if _, err := (&OTPRequestLimiter{}).Cleanup(t.Context(), time.Now()); err == nil {
+		t.Fatal("expected missing database configuration error")
+	}
+}
