@@ -1,0 +1,42 @@
+name: Repair Go module checksums
+
+on:
+  push:
+    branches:
+      - feat/api-go-backend
+    paths:
+      - .github/workflows/go-mod-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  tidy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/api-go-backend
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: api_go/go.mod
+      - name: Generate module checksums
+        working-directory: api_go
+        run: go mod tidy
+      - name: Verify tests and vet
+        working-directory: api_go
+        run: |
+          go test ./...
+          go vet ./...
+      - name: Commit module checksums
+        run: |
+          if git diff --quiet -- api_go/go.mod api_go/go.sum; then
+            echo "Go module files are already tidy."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api_go/go.mod api_go/go.sum
+          git commit -m "Add Go module checksums"
+          git push origin HEAD:feat/api-go-backend
