@@ -99,7 +99,7 @@ func TestOTPRequestHonorsLimiter(t *testing.T) {
 
 func TestOTPVerifyHashesCodeBeforeRepository(t *testing.T) {
 	repo, delivery := &fakeOTPRepo{}, &fakeDelivery{}
-	svc, err := NewOTPService(OTPServiceConfig{Repository: repo, Delivery: delivery, Pepper: []byte("0123456789abcdef0123456789abcdef"), TTL: time.Minute, MaxAttempts: 3})
+	svc, err := NewOTPService(OTPServiceConfig{Repository: repo, Delivery: delivery, Limiter: allowLimiter{allowed: true}, Pepper: []byte("0123456789abcdef0123456789abcdef"), TTL: time.Minute, MaxAttempts: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
