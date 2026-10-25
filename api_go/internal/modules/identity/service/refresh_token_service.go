@@ -76,9 +76,9 @@ func (s *RefreshTokenService) Rotate(ctx context.Context, rawToken string, devic
 		ID: id, TokenHash: hashRefreshSecret(raw), DeviceID: deviceID,
 		CreatedAt: now, ExpiresAt: now.Add(s.ttl),
 	}
-	userID, err := s.repository.Rotate(ctx, hashRefreshSecret(rawToken), replacement, now)
+	userID, familyID, err := s.repository.Rotate(ctx, hashRefreshSecret(rawToken), replacement, now)
 	if err != nil { return RefreshSession{}, "", err }
-	return RefreshSession{RefreshToken: raw, ExpiresAt: replacement.ExpiresAt}, userID, nil
+	return RefreshSession{RefreshToken: raw, FamilyID: familyID, ExpiresAt: replacement.ExpiresAt}, userID, nil
 }
 
 func newRefreshSecret() (string, error) {
