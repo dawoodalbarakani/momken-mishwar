@@ -33,3 +33,15 @@ func TestLogoutHandlerIsIdempotentForUnknownToken(t *testing.T) {
  mux.ServeHTTP(rec,req)
  if rec.Code != http.StatusNoContent { t.Fatalf("status = %d, want 204",rec.Code) }
 }
+
+
+func TestLogoutHandlerRejectsMalformedBodyWithoutRevoking(t *testing.T) {
+ revoker := &testRevoker{}
+ mux := http.NewServeMux()
+ (AuthHandlers{RefreshTokens:revoker}).Register(mux)
+ req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", strings.NewReader(`{"refresh_token":123}`))
+ rec := httptest.NewRecorder()
+ mux.ServeHTTP(rec,req)
+ if rec.Code != http.StatusBadRequest { t.Fatalf("status = %d, want 400",rec.Code) }
+ if revoker.calls != 0 { t.Fatal("invalid body must not revoke a token") }
+}
