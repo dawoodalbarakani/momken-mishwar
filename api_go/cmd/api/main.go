@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/barakanid96/momken-mishwar/api_go/internal/config"
 	"github.com/barakanid96/momken-mishwar/api_go/internal/httpapi"
