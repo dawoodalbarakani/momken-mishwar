@@ -6,14 +6,13 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
-
 import { PricingService } from '../pricing/pricing.service.js';
+import { transition, type RideSnapshot, type Actor } from '../../domain/ride-state.js';
 
 // Keep row typing local without passing a generic to Prisma's generated raw-query method.
 const queryRaw = <T>(tx: any) =>
   (strings: TemplateStringsArray, ...values: any[]): Promise<T> =>
     tx.$queryRaw(strings, ...values) as Promise<T>;
-import { transition, type RideSnapshot, type Actor } from '../../domain/ride-state.js';
 
 @Injectable()
 export class RideRequestsService {
