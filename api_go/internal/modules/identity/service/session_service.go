@@ -10,19 +10,19 @@ import (
 )
 
 var (
-	ErrSessionConfig = errors.New("identity session service is not configured")
+	ErrSessionConfig    = errors.New("identity session service is not configured")
 	ErrPhoneNotVerified = errors.New("phone number is not verified")
 )
 
 // LoginSession contains credentials returned only after a valid, single-use OTP
 // and an active account with a verified phone number have both been confirmed.
 type LoginSession struct {
-	AccessToken string
-	AccessTokenExpiresAt int64
-	RefreshToken string
+	AccessToken           string
+	AccessTokenExpiresAt  int64
+	RefreshToken          string
 	RefreshTokenExpiresAt int64
-	RefreshFamilyID string
-	User domain.User
+	RefreshFamilyID       string
+	User                  domain.User
 }
 
 type OTPVerifier interface {
@@ -30,17 +30,17 @@ type OTPVerifier interface {
 }
 
 type SessionService struct {
-	otp OTPVerifier
-	users ports.UserRepository
+	otp     OTPVerifier
+	users   ports.UserRepository
 	refresh *RefreshTokenService
-	access *AccessTokenService
+	access  *AccessTokenService
 }
 
 type SessionServiceConfig struct {
-	OTP OTPVerifier
-	Users ports.UserRepository
+	OTP           OTPVerifier
+	Users         ports.UserRepository
 	RefreshTokens *RefreshTokenService
-	AccessTokens *AccessTokenService
+	AccessTokens  *AccessTokenService
 }
 
 func NewSessionService(cfg SessionServiceConfig) (*SessionService, error) {

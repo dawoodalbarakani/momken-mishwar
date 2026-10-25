@@ -18,9 +18,9 @@ import (
 )
 
 var (
-	ErrInvalidPhone = errors.New("phone must be E.164 formatted")
-	ErrOTPDelivery = errors.New("OTP delivery failed")
-	ErrOTPConfig = errors.New("OTP service is not configured")
+	ErrInvalidPhone      = errors.New("phone must be E.164 formatted")
+	ErrOTPDelivery       = errors.New("OTP delivery failed")
+	ErrOTPConfig         = errors.New("OTP service is not configured")
 	ErrOTPRequestLimited = errors.New("OTP request rate limited")
 )
 
@@ -35,23 +35,23 @@ type OTPRequestLimiter interface {
 }
 
 type OTPService struct {
-	repository ports.OTPRepository
-	delivery OTPDelivery
-	limiter OTPRequestLimiter
-	pepper []byte
-	ttl time.Duration
+	repository  ports.OTPRepository
+	delivery    OTPDelivery
+	limiter     OTPRequestLimiter
+	pepper      []byte
+	ttl         time.Duration
 	maxAttempts int
-	now func() time.Time
+	now         func() time.Time
 }
 
 type OTPServiceConfig struct {
-	Repository ports.OTPRepository
-	Delivery OTPDelivery
-	Limiter OTPRequestLimiter
-	Pepper []byte
-	TTL time.Duration
+	Repository  ports.OTPRepository
+	Delivery    OTPDelivery
+	Limiter     OTPRequestLimiter
+	Pepper      []byte
+	TTL         time.Duration
 	MaxAttempts int
-	Now func() time.Time
+	Now         func() time.Time
 }
 
 func NewOTPService(cfg OTPServiceConfig) (*OTPService, error) {

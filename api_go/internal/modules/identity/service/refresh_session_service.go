@@ -13,23 +13,23 @@ import (
 var ErrRefreshSessionConfig = errors.New("refresh session service is not configured")
 
 type RefreshSessionResult struct {
-	AccessToken string
-	AccessTokenExpiresAt int64
-	RefreshToken string
+	AccessToken           string
+	AccessTokenExpiresAt  int64
+	RefreshToken          string
 	RefreshTokenExpiresAt int64
-	User domain.User
+	User                  domain.User
 }
 
 type RefreshSessionService struct {
-	users ports.UserRepository
+	users   ports.UserRepository
 	refresh *RefreshTokenService
-	access *AccessTokenService
+	access  *AccessTokenService
 }
 
 type RefreshSessionServiceConfig struct {
-	Users ports.UserRepository
+	Users         ports.UserRepository
 	RefreshTokens *RefreshTokenService
-	AccessTokens *AccessTokenService
+	AccessTokens  *AccessTokenService
 }
 
 func NewRefreshSessionService(cfg RefreshSessionServiceConfig) (*RefreshSessionService, error) {

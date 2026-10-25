@@ -9,14 +9,14 @@ import (
 func validChallenge() OTPChallenge {
 	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	return OTPChallenge{
-		ID: "challenge-1",
-		PhoneE164: "+967771234567",
-		Purpose: OTPPurposeLogin,
-		CodeHash: "not-a-plaintext-code",
-		Attempts: 0,
+		ID:          "challenge-1",
+		PhoneE164:   "+967771234567",
+		Purpose:     OTPPurposeLogin,
+		CodeHash:    "not-a-plaintext-code",
+		Attempts:    0,
 		MaxAttempts: 3,
-		CreatedAt: now,
-		ExpiresAt: now.Add(5 * time.Minute),
+		CreatedAt:   now,
+		ExpiresAt:   now.Add(5 * time.Minute),
 	}
 }
 

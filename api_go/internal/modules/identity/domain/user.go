@@ -9,13 +9,13 @@ import (
 type Role string
 
 const (
-	RoleCustomer           Role = "CUSTOMER"
-	RoleDriver             Role = "DRIVER"
-	RoleSupportAgent       Role = "SUPPORT_AGENT"
-	RoleOperationsManager  Role = "OPERATIONS_MANAGER"
-	RoleFinanceManager     Role = "FINANCE_MANAGER"
-	RoleAdmin              Role = "ADMIN"
-	RoleSuperAdmin         Role = "SUPER_ADMIN"
+	RoleCustomer          Role = "CUSTOMER"
+	RoleDriver            Role = "DRIVER"
+	RoleSupportAgent      Role = "SUPPORT_AGENT"
+	RoleOperationsManager Role = "OPERATIONS_MANAGER"
+	RoleFinanceManager    Role = "FINANCE_MANAGER"
+	RoleAdmin             Role = "ADMIN"
+	RoleSuperAdmin        Role = "SUPER_ADMIN"
 )
 
 type UserStatus string
@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	ErrInvalidUser = errors.New("invalid user")
+	ErrInvalidUser  = errors.New("invalid user")
 	ErrUserInactive = errors.New("user is not active")
 )
 

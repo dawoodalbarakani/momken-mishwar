@@ -12,7 +12,7 @@ import (
 
 type API struct {
 	logger *slog.Logger
-	db *pgxpool.Pool
+	db     *pgxpool.Pool
 }
 
 func New(logger *slog.Logger, db *pgxpool.Pool) http.Handler {
@@ -22,7 +22,9 @@ func New(logger *slog.Logger, db *pgxpool.Pool) http.Handler {
 func NewWithAuth(logger *slog.Logger, db *pgxpool.Pool, auth *AuthHandlers) http.Handler {
 	api := &API{logger: logger, db: db}
 	mux := http.NewServeMux()
-	if auth != nil { auth.Register(mux) }
+	if auth != nil {
+		auth.Register(mux)
+	}
 	mux.HandleFunc("GET /health/live", api.live)
 	mux.HandleFunc("GET /health/ready", api.ready)
 	mux.HandleFunc("GET /api/v1", api.index)
@@ -47,7 +49,7 @@ func (a *API) index(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"service": "Mishwar Go API",
 		"version": "v1",
-		"status": "scaffold",
+		"status":  "scaffold",
 		"message": "Business endpoints are being ported incrementally; existing API remains the contract source of truth.",
 	})
 }

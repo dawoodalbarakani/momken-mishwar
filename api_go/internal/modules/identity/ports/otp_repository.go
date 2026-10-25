@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	ErrOTPNotFound = errors.New("OTP challenge not found")
+	ErrOTPNotFound     = errors.New("OTP challenge not found")
 	ErrOTPCodeMismatch = errors.New("OTP code mismatch")
 )
 

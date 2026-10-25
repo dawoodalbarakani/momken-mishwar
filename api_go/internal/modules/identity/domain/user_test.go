@@ -12,8 +12,8 @@ func TestUserValidate(t *testing.T) {
 	now := time.Now().UTC()
 
 	tests := []struct {
-		name string
-		user User
+		name    string
+		user    User
 		wantErr bool
 	}{
 		{
@@ -21,18 +21,18 @@ func TestUserValidate(t *testing.T) {
 			user: User{ID: "u-1", PhoneE164: &phone, Locale: "ar", Status: UserActive, CreatedAt: now, UpdatedAt: now},
 		},
 		{
-			name: "active user without identifier",
-			user: User{ID: "u-2", Locale: "ar", Status: UserActive},
+			name:    "active user without identifier",
+			user:    User{ID: "u-2", Locale: "ar", Status: UserActive},
 			wantErr: true,
 		},
 		{
-			name: "unsupported locale",
-			user: User{ID: "u-3", Email: &email, Locale: "fr", Status: UserActive},
+			name:    "unsupported locale",
+			user:    User{ID: "u-3", Email: &email, Locale: "fr", Status: UserActive},
 			wantErr: true,
 		},
 		{
-			name: "unknown status",
-			user: User{ID: "u-4", Email: &email, Locale: "en", Status: "UNKNOWN"},
+			name:    "unknown status",
+			user:    User{ID: "u-4", Email: &email, Locale: "en", Status: "UNKNOWN"},
 			wantErr: true,
 		},
 		{
@@ -59,7 +59,7 @@ func TestUserValidate(t *testing.T) {
 func TestCanAuthenticate(t *testing.T) {
 	tests := []struct {
 		status UserStatus
-		want bool
+		want   bool
 	}{
 		{status: UserActive, want: true},
 		{status: UserSuspended, want: false},

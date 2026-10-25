@@ -21,20 +21,20 @@ func AccessTokenClaimsFromContext(ctx context.Context) (service.AccessTokenClaim
 func RequireAccessToken(tokens *service.AccessTokenService, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if tokens == nil {
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error":"authentication_unavailable"})
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "authentication_unavailable"})
 			return
 		}
 		header := r.Header.Get("Authorization")
 		parts := strings.Fields(header)
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
 			w.Header().Set("WWW-Authenticate", "Bearer")
-			writeJSON(w, http.StatusUnauthorized, map[string]string{"error":"unauthorized"})
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 			return
 		}
 		claims, err := tokens.Verify(parts[1])
 		if err != nil {
 			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
-			writeJSON(w, http.StatusUnauthorized, map[string]string{"error":"unauthorized"})
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 			return
 		}
 		ctx := context.WithValue(r.Context(), accessTokenContextKey{}, claims)

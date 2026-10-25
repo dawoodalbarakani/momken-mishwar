@@ -12,10 +12,10 @@ import (
 func TestOTPRequestLimiterRejectsInvalidConfiguration(t *testing.T) {
 	pool := &pgxpool.Pool{}
 	cases := []struct {
-		name             string
-		db               *pgxpool.Pool
-		key              []byte
-		window           time.Duration
+		name                string
+		db                  *pgxpool.Pool
+		key                 []byte
+		window              time.Duration
 		phoneLimit, ipLimit int
 	}{
 		{name: "nil database", db: nil, key: bytes.Repeat([]byte{1}, 32), window: time.Minute, phoneLimit: 3, ipLimit: 10},

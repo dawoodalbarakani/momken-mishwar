@@ -18,41 +18,51 @@ var ErrRefreshServiceConfig = errors.New("refresh token service is not configure
 
 type RefreshTokenService struct {
 	repository ports.RefreshTokenRepository
-	ttl time.Duration
-	now func() time.Time
+	ttl        time.Duration
+	now        func() time.Time
 }
 
 type RefreshTokenServiceConfig struct {
 	Repository ports.RefreshTokenRepository
-	TTL time.Duration
-	Now func() time.Time
+	TTL        time.Duration
+	Now        func() time.Time
 }
 
 type RefreshSession struct {
 	RefreshToken string
-	FamilyID string
-	ExpiresAt time.Time
+	FamilyID     string
+	ExpiresAt    time.Time
 }
 
 func NewRefreshTokenService(cfg RefreshTokenServiceConfig) (*RefreshTokenService, error) {
 	if cfg.Repository == nil || cfg.TTL <= 0 {
 		return nil, ErrRefreshServiceConfig
 	}
-	if cfg.Now == nil { cfg.Now = time.Now }
+	if cfg.Now == nil {
+		cfg.Now = time.Now
+	}
 	return &RefreshTokenService{repository: cfg.Repository, ttl: cfg.TTL, now: cfg.Now}, nil
 }
 
 // Create issues an opaque, high-entropy refresh credential. Only its SHA-256
 // digest is persisted; the raw token is returned once to the trusted caller.
 func (s *RefreshTokenService) Create(ctx context.Context, userID string, deviceID *string) (RefreshSession, error) {
-	if userID == "" { return RefreshSession{}, errors.New("user ID is required") }
+	if userID == "" {
+		return RefreshSession{}, errors.New("user ID is required")
+	}
 	now := s.now().UTC()
 	raw, err := newRefreshSecret()
-	if err != nil { return RefreshSession{}, fmt.Errorf("generate refresh secret: %w", err) }
+	if err != nil {
+		return RefreshSession{}, fmt.Errorf("generate refresh secret: %w", err)
+	}
 	id, err := newUUID()
-	if err != nil { return RefreshSession{}, fmt.Errorf("generate refresh token ID: %w", err) }
+	if err != nil {
+		return RefreshSession{}, fmt.Errorf("generate refresh token ID: %w", err)
+	}
 	familyID, err := newUUID()
-	if err != nil { return RefreshSession{}, fmt.Errorf("generate refresh family ID: %w", err) }
+	if err != nil {
+		return RefreshSession{}, fmt.Errorf("generate refresh family ID: %w", err)
+	}
 	token := domain.RefreshToken{
 		ID: id, UserID: userID, FamilyID: familyID, TokenHash: hashRefreshSecret(raw),
 		DeviceID: deviceID, CreatedAt: now, ExpiresAt: now.Add(s.ttl),
@@ -66,24 +76,34 @@ func (s *RefreshTokenService) Create(ctx context.Context, userID string, deviceI
 // Rotate invalidates the submitted token and creates its successor atomically.
 // Reuse of an already rotated token revokes the entire token family in storage.
 func (s *RefreshTokenService) Rotate(ctx context.Context, rawToken string, deviceID *string) (RefreshSession, string, error) {
-	if rawToken == "" { return RefreshSession{}, "", domain.ErrRefreshTokenInvalid }
+	if rawToken == "" {
+		return RefreshSession{}, "", domain.ErrRefreshTokenInvalid
+	}
 	now := s.now().UTC()
 	raw, err := newRefreshSecret()
-	if err != nil { return RefreshSession{}, "", fmt.Errorf("generate refresh secret: %w", err) }
+	if err != nil {
+		return RefreshSession{}, "", fmt.Errorf("generate refresh secret: %w", err)
+	}
 	id, err := newUUID()
-	if err != nil { return RefreshSession{}, "", fmt.Errorf("generate refresh token ID: %w", err) }
+	if err != nil {
+		return RefreshSession{}, "", fmt.Errorf("generate refresh token ID: %w", err)
+	}
 	replacement := domain.RefreshToken{
 		ID: id, TokenHash: hashRefreshSecret(raw), DeviceID: deviceID,
 		CreatedAt: now, ExpiresAt: now.Add(s.ttl),
 	}
 	userID, familyID, err := s.repository.Rotate(ctx, hashRefreshSecret(rawToken), replacement, now)
-	if err != nil { return RefreshSession{}, "", err }
+	if err != nil {
+		return RefreshSession{}, "", err
+	}
 	return RefreshSession{RefreshToken: raw, FamilyID: familyID, ExpiresAt: replacement.ExpiresAt}, userID, nil
 }
 
 func newRefreshSecret() (string, error) {
 	var b [32]byte
-	if _, err := rand.Read(b[:]); err != nil { return "", err }
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
 	return base64.RawURLEncoding.EncodeToString(b[:]), nil
 }
 
@@ -104,7 +124,11 @@ func (s *RefreshTokenService) RevokeFamily(ctx context.Context, familyID, reason
 // Revoke invalidates the complete family identified by a presented refresh token.
 // Only the token digest is passed to the repository.
 func (s *RefreshTokenService) Revoke(ctx context.Context, rawToken, reason string) error {
-	if rawToken == "" { return domain.ErrRefreshTokenInvalid }
-	if reason == "" { reason = "LOGOUT" }
+	if rawToken == "" {
+		return domain.ErrRefreshTokenInvalid
+	}
+	if reason == "" {
+		reason = "LOGOUT"
+	}
 	return s.repository.RevokeByHash(ctx, hashRefreshSecret(rawToken), reason, s.now().UTC())
 }
