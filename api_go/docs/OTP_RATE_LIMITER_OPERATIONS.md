@@ -4,7 +4,7 @@ The Go API's PostgreSQL-backed OTP request limiter stores HMAC-SHA256 digests of
 
 ## Migration
 
-Apply `database/migrations/0002_otp_request_limits.sql` before constructing the limiter. Do not enable OTP request routes until the limiter and a real delivery adapter are configured.
+Apply `database/migrations/0003_otp_request_limits.sql` before constructing the limiter. Do not enable OTP request routes until the limiter and a real delivery adapter are configured.
 
 ## Retention cleanup
 
