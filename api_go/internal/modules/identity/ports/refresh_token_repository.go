@@ -11,6 +11,6 @@ type RefreshTokenRepository interface {
 	Create(ctx context.Context, token domain.RefreshToken) error
 	// Rotate atomically consumes oldHash and inserts replacement in the same family.
 	// A reused rotated token revokes its entire family before returning ErrRefreshTokenReuse.
-	Rotate(ctx context.Context, oldHash string, replacement domain.RefreshToken, now time.Time) (userID string, err error)
+	Rotate(ctx context.Context, oldHash string, replacement domain.RefreshToken, now time.Time) (userID, familyID string, err error)
 	RevokeFamily(ctx context.Context, familyID, reason string, now time.Time) error
 }
