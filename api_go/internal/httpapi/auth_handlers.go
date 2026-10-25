@@ -25,10 +25,15 @@ type SessionRefresher interface {
 	Refresh(ctx context.Context, rawToken string, deviceID *string) (service.RefreshSessionResult, error)
 }
 
+type SessionRevoker interface {
+	Revoke(ctx context.Context, rawToken, reason string) error
+}
+
 type AuthHandlers struct {
 	OTP OTPRequester
 	Sessions SessionLogin
 	RefreshSessions SessionRefresher
+	RefreshTokens SessionRevoker
 }
 
 type otpRequest struct {
@@ -50,6 +55,7 @@ func (h AuthHandlers) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/auth/otp/request", h.requestOTP)
 	mux.HandleFunc("POST /api/v1/auth/otp/verify", h.login)
 	mux.HandleFunc("POST /api/v1/auth/refresh", h.refresh)
+	mux.HandleFunc("POST /api/v1/auth/logout", h.logout)
 }
 
 func (h AuthHandlers) requestOTP(w http.ResponseWriter, r *http.Request) {
@@ -169,4 +175,35 @@ func (h AuthHandlers) refresh(w http.ResponseWriter, r *http.Request) {
 		}; return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"access_token":session.AccessToken,"token_type":"Bearer","expires_at":session.AccessTokenExpiresAt,"refresh_token":session.RefreshToken,"refresh_expires_at":session.RefreshTokenExpiresAt,"user":map[string]any{"id":session.User.ID,"phone_e164":session.User.PhoneE164,"display_name":session.User.DisplayName,"locale":session.User.Locale,"roles":session.User.Roles}})
+}
+
+type logoutRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+func (h AuthHandlers) logout(w http.ResponseWriter, r *http.Request) {
+	if h.RefreshTokens == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error":"authentication_unavailable"})
+		return
+	}
+	var input logoutRequest
+	if err := decodeJSON(w, r, &input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error":"invalid_request"})
+		return
+	}
+	input.RefreshToken = strings.TrimSpace(input.RefreshToken)
+	if input.RefreshToken == "" || len(input.RefreshToken) > 512 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error":"invalid_request"})
+		return
+	}
+	if err := h.RefreshTokens.Revoke(r.Context(), input.RefreshToken, "LOGOUT"); err != nil {
+		if errors.Is(err, domain.ErrRefreshTokenInvalid) {
+			// Idempotent logout avoids revealing whether a credential ever existed.
+			writeJSON(w, http.StatusNoContent, nil)
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error":"logout_failed"})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
