@@ -30,11 +30,11 @@ func (r *RefreshTokenRepository) Create(ctx context.Context, token domain.Refres
 	return nil
 }
 
-func (r *RefreshTokenRepository) Rotate(ctx context.Context, oldHash string, replacement domain.RefreshToken, now time.Time) (string, error) {
-	if r.db == nil { return "", errors.New("identity refresh token repository: nil database") }
-	if oldHash == "" { return "", domain.ErrRefreshTokenInvalid }
+func (r *RefreshTokenRepository) Rotate(ctx context.Context, oldHash string, replacement domain.RefreshToken, now time.Time) (string, string, error) {
+	if r.db == nil { return "", "", errors.New("identity refresh token repository: nil database") }
+	if oldHash == "" { return "", "", domain.ErrRefreshTokenInvalid }
 	tx, err := r.db.Begin(ctx)
-	if err != nil { return "", fmt.Errorf("begin refresh rotation: %w", err) }
+	if err != nil { return "", "", fmt.Errorf("begin refresh rotation: %w", err) }
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var userID, familyID string
@@ -44,33 +44,33 @@ func (r *RefreshTokenRepository) Rotate(ctx context.Context, oldHash string, rep
 		SELECT user_id::text, family_id::text, expires_at, rotated_at, revoked_at
 		FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE`, oldHash).
 		Scan(&userID, &familyID, &expiresAt, &rotatedAt, &revokedAt)
-	if errors.Is(err, pgx.ErrNoRows) { return "", domain.ErrRefreshTokenInvalid }
-	if err != nil { return "", fmt.Errorf("load refresh token: %w", err) }
+	if errors.Is(err, pgx.ErrNoRows) { return "", "", domain.ErrRefreshTokenInvalid }
+	if err != nil { return "", "", fmt.Errorf("load refresh token: %w", err) }
 
 	if rotatedAt != nil || revokedAt != nil {
 		_, err = tx.Exec(ctx, `UPDATE refresh_tokens
 			SET revoked_at = COALESCE(revoked_at, $2), revoked_reason = COALESCE(revoked_reason, 'REUSE_DETECTED')
 			WHERE family_id = $1::uuid`, familyID, now)
-		if err != nil { return "", fmt.Errorf("revoke reused refresh family: %w", err) }
-		if err := tx.Commit(ctx); err != nil { return "", fmt.Errorf("commit reuse response: %w", err) }
-		return "", domain.ErrRefreshTokenReuse
+		if err != nil { return "", "", fmt.Errorf("revoke reused refresh family: %w", err) }
+		if err := tx.Commit(ctx); err != nil { return "", "", fmt.Errorf("commit reuse response: %w", err) }
+		return "", "", domain.ErrRefreshTokenReuse
 	}
 	if !expiresAt.After(now) {
-		return "", domain.ErrRefreshTokenExpired
+		return "", "", domain.ErrRefreshTokenExpired
 	}
 	replacement.UserID = userID
 	replacement.FamilyID = familyID
-	if err := replacement.Validate(); err != nil { return "", err }
+	if err := replacement.Validate(); err != nil { return "", "", err }
 	_, err = tx.Exec(ctx, `UPDATE refresh_tokens SET rotated_at = $2 WHERE token_hash = $1 AND rotated_at IS NULL AND revoked_at IS NULL`, oldHash, now)
-	if err != nil { return "", fmt.Errorf("mark refresh token rotated: %w", err) }
+	if err != nil { return "", "", fmt.Errorf("mark refresh token rotated: %w", err) }
 	_, err = tx.Exec(ctx, `
 		INSERT INTO refresh_tokens (id, user_id, family_id, token_hash, device_id, expires_at, created_at)
 		VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7)`,
 		replacement.ID, replacement.UserID, replacement.FamilyID, replacement.TokenHash,
 		replacement.DeviceID, replacement.ExpiresAt, replacement.CreatedAt)
-	if err != nil { return "", fmt.Errorf("insert rotated refresh token: %w", err) }
-	if err := tx.Commit(ctx); err != nil { return "", fmt.Errorf("commit refresh rotation: %w", err) }
-	return userID, nil
+	if err != nil { return "", "", fmt.Errorf("insert rotated refresh token: %w", err) }
+	if err := tx.Commit(ctx); err != nil { return "", "", fmt.Errorf("commit refresh rotation: %w", err) }
+	return userID, familyID, nil
 }
 
 func (r *RefreshTokenRepository) RevokeFamily(ctx context.Context, familyID, reason string, now time.Time) error {
