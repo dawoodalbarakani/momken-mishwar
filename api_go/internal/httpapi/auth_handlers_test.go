@@ -7,6 +7,8 @@ import (
  "strings"
  "testing"
 
+ "github.com/barakanid96/momken-mishwar/api_go/internal/modules/identity/service"
+
  "github.com/barakanid96/momken-mishwar/api_go/internal/modules/identity/domain"
 )
 
@@ -44,4 +46,34 @@ func TestLogoutHandlerRejectsMalformedBodyWithoutRevoking(t *testing.T) {
  mux.ServeHTTP(rec,req)
  if rec.Code != http.StatusBadRequest { t.Fatalf("status = %d, want 400",rec.Code) }
  if revoker.calls != 0 { t.Fatal("invalid body must not revoke a token") }
+}
+
+
+type testRefresher struct { token string; err error; calls int }
+func (f *testRefresher) Refresh(_ context.Context, token string, _ *string) (service.RefreshSessionResult, error) {
+ f.calls++
+ f.token = token
+ return service.RefreshSessionResult{}, f.err
+}
+
+func TestRefreshHandlerRejectsInvalidCredential(t *testing.T) {
+ refresher := &testRefresher{err: domain.ErrRefreshTokenInvalid}
+ mux := http.NewServeMux()
+ (AuthHandlers{RefreshSessions:refresher}).Register(mux)
+ req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", strings.NewReader(`{"refresh_token":"old-token"}`))
+ rec := httptest.NewRecorder()
+ mux.ServeHTTP(rec, req)
+ if rec.Code != http.StatusUnauthorized { t.Fatalf("status = %d, want 401; body=%s", rec.Code, rec.Body.String()) }
+ if refresher.calls != 1 || refresher.token != "old-token" { t.Fatalf("unexpected refresh invocation: %#v", refresher) }
+}
+
+func TestRefreshHandlerRejectsMalformedCredential(t *testing.T) {
+ refresher := &testRefresher{}
+ mux := http.NewServeMux()
+ (AuthHandlers{RefreshSessions:refresher}).Register(mux)
+ req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", strings.NewReader(`{"refresh_token":123}`))
+ rec := httptest.NewRecorder()
+ mux.ServeHTTP(rec, req)
+ if rec.Code != http.StatusBadRequest { t.Fatalf("status = %d, want 400", rec.Code) }
+ if refresher.calls != 0 { t.Fatal("malformed request must not rotate credentials") }
 }
