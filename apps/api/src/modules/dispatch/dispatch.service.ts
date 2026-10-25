@@ -26,7 +26,7 @@ export class DispatchService {
         where: { rideId, status: 'PENDING', expiresAt: { gt: new Date() } },
         orderBy: { offeredAt: 'asc' },
       });
-      if (existing.length >(tx) 0) {
+      if (existing.length > 0) {
         return { rideId, offers: existing, expiresAt: existing.reduce((latest, o) => o.expiresAt > latest ? o.expiresAt : latest, existing[0].expiresAt), replayed: true };
       }
       await tx.rideOffers.updateMany({
