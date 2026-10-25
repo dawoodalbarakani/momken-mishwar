@@ -91,3 +91,12 @@ func hashRefreshSecret(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
 }
+
+// RevokeFamily invalidates every refresh credential in a family, including
+// rotated credentials, using the repository's atomic family update.
+func (s *RefreshTokenService) RevokeFamily(ctx context.Context, familyID, reason string) error {
+	if familyID == "" || reason == "" {
+		return errors.New("family ID and revocation reason are required")
+	}
+	return s.repository.RevokeFamily(ctx, familyID, reason, s.now().UTC())
+}
