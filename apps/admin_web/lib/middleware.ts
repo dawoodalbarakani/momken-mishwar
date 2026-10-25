@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { PAGE_ROLES } from "./roles";
-import { getToken, parseJwt } from "./auth";
+import { parseJwt } from "./auth";
 
 const PROTECTED_PREFIXES = [
   "/drivers",

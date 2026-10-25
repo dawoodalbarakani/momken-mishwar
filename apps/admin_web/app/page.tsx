@@ -1,13 +1,9 @@
-"use client";
-"use strict";
-
-import { useEffect, useState } from "react";
+import { parseJwt, type JwtPayload } from "@/lib/auth";
+import { getServerToken } from "@/lib/auth-server";
 import { apiRequest, ApiResponseError } from "@/lib/api";
-import { hasAnyRole } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useSession } from "@/components/providers/session-provider";
 import { Truck, DollarSign, Users, Clock, AlertTriangle } from "lucide-react";
 
 interface DashboardStats {
@@ -20,31 +16,64 @@ interface DashboardStats {
   total_commissions?: string;
 }
 
-export default function DashboardPage() {
-  const { user, hasAnyRole: hasRole } = useSession();
-  const [stats, setStats] = useState<DashboardStats>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+async function getServerUser(): Promise<{ email: string; roles: string[] } | null> {
+  const token = await getServerToken();
+  if (!token) return null;
+  const payload = parseJwt<JwtPayload & { email?: string; sub?: string }>(token);
+  if (!payload) return null;
+  return {
+    email: payload.email ?? "",
+    roles: payload.roles ?? [],
+  };
+}
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await apiRequest<DashboardStats>("/admin/dashboard/stats");
-        setStats(data);
-      } catch (err) {
-        if (err instanceof ApiResponseError) {
-          setError(err.message_ar || err.message_en);
-        } else {
-          setError("فشل تحميل إحصائيات لوحة التحكم");
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+async function getDashboardStats(token: string | null): Promise<DashboardStats> {
+  try {
+    return await apiRequest<DashboardStats>("/admin/dashboard/stats", {
+      next: { revalidate: 60 },
+      token,
+    });
+  } catch {
+    return {};
+  }
+}
+
+function hasRole(roles: string[], allowed: string[]): boolean {
+  return allowed.some((r) => roles.includes(r));
+}
+
+function StatCard({
+  title,
+  value,
+  icon,
+  subtitle,
+}: {
+  title: string;
+  value: React.ReactNode;
+  icon: React.ReactNode;
+  subtitle?: React.ReactNode;
+}) {
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500">{title}</p>
+          <p className="text-2xl font-bold">{value}</p>
+          {subtitle && <div className="mt-2">{subtitle}</div>}
+        </div>
+        <div className="p-2 rounded bg-brand-50 text-brand-600">{icon}</div>
+      </div>
+    </Card>
+  );
+}
+
+export default async function DashboardPage() {
+  const user = await getServerUser();
+  const token = await getServerToken();
+  const stats = await getDashboardStats(token);
 
   const ridesByStatus = stats.rides_by_status || {};
+  const canAccessAudit = hasRole(user?.roles ?? [], ["ADMIN", "SUPER_ADMIN"]);
 
   return (
     <div className="container-admin py-6">
@@ -54,19 +83,16 @@ export default function DashboardPage() {
           <p className="text-gray-600">مرحباً، {user?.email || "المستخدم"}</p>
         </div>
         <div className="flex gap-2">
-          {hasRole(["ADMIN", "SUPER_ADMIN"]) && (
-            <a href="/audit" className="text-sm px-3 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200">
+          {canAccessAudit && (
+            <a
+              href="/audit"
+              className="text-sm px-3 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+            >
               سجل التدقيق
             </a>
           )}
         </div>
       </div>
-
-      {error && (
-        <div className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-800 text-sm">
-          {error}
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatCard
@@ -96,12 +122,11 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <div className="p-4">
+        <Card className="p-4">
+          <div>
             <h2 className="font-bold text-lg mb-4">ملخص الحالة</h2>
             <p className="text-gray-600 text-sm">
-              استدعت هذه الصفحة `GET /v1/admin/dashboard/stats`. في غياب خادم Backend فعال، تُعرض القيم الافتراضية
-              وتُسجل خطأ الاستدعاء أعلاه. هذه الصفحة تستدعي API حقيقي ولم تُختبر لغياب Prisma runtime في الخادم.
+              تستدعي هذه الصفحة `GET /v1/admin/dashboard/stats` من الخادم باستخدام Server Component.
             </p>
           </div>
         </Card>
@@ -116,7 +141,7 @@ export default function DashboardPage() {
             <TableRow>
               <td>إدارة السائقين</td>
               <td>
-                {hasRole(["OPERATIONS_MANAGER", "ADMIN", "SUPER_ADMIN"]) ? (
+                {hasRole(user?.roles ?? [], ["OPERATIONS_MANAGER", "ADMIN", "SUPER_ADMIN"]) ? (
                   <Badge variant="default">مفعل</Badge>
                 ) : (
                   <Badge variant="secondary">غير مسموح</Badge>
@@ -127,20 +152,5 @@ export default function DashboardPage() {
         </Table>
       </div>
     </div>
-  );
-}
-
-function StatCard({ title, value, icon, subtitle }: { title: string; value: React.ReactNode; icon: React.ReactNode; subtitle?: React.ReactNode }) {
-  return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
-          {subtitle && <div className="mt-2">{subtitle}</div>}
-        </div>
-        <div className="p-2 rounded bg-brand-50 text-brand-600">{icon}</div>
-      </div>
-    </Card>
   );
 }

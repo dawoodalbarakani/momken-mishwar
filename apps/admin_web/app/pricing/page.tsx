@@ -1,14 +1,11 @@
-"use client";
-"use strict";
-
-import { useEffect, useState } from "react";
-import { apiRequest, ApiResponseError } from "@/lib/api";
+import { getServerToken } from "@/lib/auth-server";
+import { apiRequest } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Percent, Truck, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PublishPricingButton } from "./publish-pricing-button";
+import { Search } from "lucide-react";
 
 type PricingRule = {
   id: string;
@@ -23,40 +20,40 @@ type PricingRule = {
   created_at: string;
 };
 
-export default function PricingPage() {
-  const [rules, setRules] = useState<PricingRule[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+export default async function PricingPage({
+  searchParams,
+}: {
+  searchParams: { q?: string };
+}) {
+  const token = await getServerToken();
+  const query = (searchParams.q || "").toLowerCase();
 
-  useEffect(() => {
-    apiRequest<PricingRule[]>("/admin/pricing-rules?limit=50")
-      .then((data) => setRules(data || []))
-      .catch((err) => setError(err instanceof ApiResponseError ? err.message_ar : "فشل تحميل قواعد التسعير"))
-      .finally(() => setLoading(false));
-  }, []);
-
-  async function handlePublish(id: string) {
-    try {
-      await apiRequest(`/admin/pricing-rules/${id}/publish`, { method: "POST" });
-      setRules((prev) => prev.map((r) => (r.id === id ? { ...r, is_published: true } : r)));
-    } catch (err) {
-      setError(err instanceof ApiResponseError ? err.message_ar : "فشل النشر");
-    }
+  let rules: PricingRule[] = [];
+  try {
+    rules = (await apiRequest<PricingRule[]>("/admin/pricing-rules?limit=50", {
+      next: { revalidate: 60 },
+      token,
+    })) || [];
+  } catch {
+    rules = [];
   }
 
-  if (loading) return <div className="p-4">جاري التحميل...</div>;
+  const filtered = rules.filter(
+    (r) => r.region.toLowerCase().includes(query) || r.vehicle_type.toLowerCase().includes(query)
+  );
 
   return (
     <div className="container-admin py-6">
       <Card className="p-4">
         <div className="flex flex-col md:flex-row gap-3 items-end mb-4">
           <div className="flex-1">
-            <div className="flex items-center gap-2 text-sm font-medium mb-1"><Search className="w-4 h-4" /> البحث عن قاعدة تسعير</div>
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="المنطقة أو نوع المركبة" />
+            <div className="flex items-center gap-2 text-sm font-medium mb-1">
+              <Search className="w-4 h-4" /> البحث عن قاعدة تسعير
+            </div>
+            <Input defaultValue={searchParams.q || ""} placeholder="المنطقة أو نوع المركبة" />
           </div>
           <p className="text-xs text-gray-500 hidden md:block">
-            استدعي API حقيقي: `GET/POST /v1/admin/pricing-rules`، `POST /v1/admin/pricing-rules/:id/preview|publish`. الإصدارات المنشورة غير قابلة للتعديل. لم تُختبر لغياب Backend فعال.
+            استدعي API حقيقي: `GET/POST /v1/admin/pricing-rules`، `POST /v1/admin/pricing-rules/:id/publish`.
           </p>
         </div>
         <div className="overflow-auto">
@@ -75,7 +72,7 @@ export default function PricingPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rules.filter((r) => r.region.includes(query) || r.vehicle_type.includes(query)).map((r) => (
+              {filtered.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>{r.region}</TableCell>
                   <TableCell>{r.vehicle_type}</TableCell>
@@ -84,29 +81,26 @@ export default function PricingPage() {
                   <TableCell className="font-mono text-xs">{r.per_minute}</TableCell>
                   <TableCell className="font-mono text-xs">{r.commission_percent}</TableCell>
                   <TableCell className="font-mono text-xs">v{r.version}</TableCell>
-                  <TableCell><Badge variant={r.is_published ? "default" : "secondary"}>{r.is_published ? "منشور" : "مسودة"}</Badge></TableCell>
                   <TableCell>
-                    {!r.is_published && (
-                      <Button size="sm" onClick={() => handlePublish(r.id)}>نشر</Button>
-                    )}
+                    <Badge variant={r.is_published ? "default" : "secondary"}>
+                      {r.is_published ? "منشور" : "مسودة"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {!r.is_published && <PublishPricingButton ruleId={r.id} token={token} />}
                   </TableCell>
                 </TableRow>
               ))}
               {rules.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-gray-500 py-4">لا توجد قواعد تسعير</TableCell>
+                  <TableCell colSpan={9} className="text-center text-gray-500 py-4">
+                    لا توجد قواعد تسعير
+                  </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
-      </Card>
-
-      <Card className="mt-4 p-4">
-        <h3 className="font-bold mb-2">معاينة السعر قبل النشر</h3>
-        <p className="text-sm text-gray-600">
-          استدعي `POST /v1/admin/pricing-rules/:id/preview` لجلب السعر التقديري من محرك التسعير قبل النشر. هذه الصفحة تستدعي API حقيقي ولم تُختبر لغياب Prisma runtime في الخادم.
-        </p>
       </Card>
     </div>
   );

@@ -1,4 +1,4 @@
-import { getToken } from "./auth";
+import { parseJwt, type JwtPayload } from "./auth";
 
 export interface ApiErrorBody {
   code: string;
@@ -25,15 +25,14 @@ export class ApiResponseError extends Error {
   }
 }
 
-const BASE_URL = (() => {
+function getBaseUrl(): string {
   if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_BASE_URL) {
     return process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/+$/, "");
   }
   return "http://localhost:4000/v1";
-})();
+}
 
-function headersWithAuth(options: RequestInit): HeadersInit {
-  const token = getToken();
+function headersWithAuth(options: RequestInit, token?: string | null): HeadersInit {
   const headers: Record<string, string> = {};
   if (options.headers) {
     if (options.headers instanceof Headers) {
@@ -54,11 +53,11 @@ function headersWithAuth(options: RequestInit): HeadersInit {
 
 export async function apiRequest<T>(
   path: string,
-  options: RequestInit & { idempotencyKey?: string } = {}
+  options: RequestInit & { idempotencyKey?: string; token?: string | null } = {}
 ): Promise<T> {
-  const { idempotencyKey, ...fetchOptions } = options;
-  const url = path.startsWith("http") ? path : `${BASE_URL}${path}`;
-  const headers = headersWithAuth(fetchOptions);
+  const { idempotencyKey, token, ...fetchOptions } = options;
+  const url = path.startsWith("http") ? path : `${getBaseUrl()}${path}`;
+  const headers = headersWithAuth(fetchOptions, token);
   if (idempotencyKey) {
     (headers as Record<string, string>)["Idempotency-Key"] = idempotencyKey;
   }
@@ -80,7 +79,7 @@ export async function apiRequest<T>(
         body = parsed as unknown as ApiErrorBody;
       }
     } catch {
-      // ignor parsing error
+      // ignore parsing error
     }
     throw new ApiResponseError(body, res.status);
   }
@@ -101,5 +100,5 @@ export async function apiRequest<T>(
 }
 
 export function apiUrl(path: string): string {
-  return path.startsWith("http") ? path : `${BASE_URL}${path}`;
+  return path.startsWith("http") ? path : `${getBaseUrl()}${path}`;
 }
