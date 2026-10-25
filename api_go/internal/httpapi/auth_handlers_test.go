@@ -2,11 +2,12 @@ package httpapi
 
 import (
  "context"
- "errors"
- "net/http"
+  "net/http"
  "net/http/httptest"
  "strings"
  "testing"
+
+ "github.com/barakanid96/momken-mishwar/api_go/internal/modules/identity/domain"
 )
 
 type testRevoker struct { token, reason string; err error; calls int }
@@ -24,7 +25,7 @@ func TestLogoutHandlerReturnsNoContent(t *testing.T) {
 }
 
 func TestLogoutHandlerIsIdempotentForUnknownToken(t *testing.T) {
- revoker := &testRevoker{err: errors.New("unknown token")}
+ revoker := &testRevoker{err: domain.ErrRefreshTokenInvalid}
  mux := http.NewServeMux()
  (AuthHandlers{RefreshTokens:revoker}).Register(mux)
  req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", strings.NewReader(`{"refresh_token":"unknown"}`))
