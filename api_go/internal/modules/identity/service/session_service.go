@@ -25,15 +25,19 @@ type LoginSession struct {
 	User domain.User
 }
 
+type OTPVerifier interface {
+	Verify(ctx context.Context, phoneE164 string, purpose domain.OTPPurpose, code string) (domain.OTPChallenge, error)
+}
+
 type SessionService struct {
-	otp *OTPService
+	otp OTPVerifier
 	users ports.UserRepository
 	refresh *RefreshTokenService
 	access *AccessTokenService
 }
 
 type SessionServiceConfig struct {
-	OTP *OTPService
+	OTP OTPVerifier
 	Users ports.UserRepository
 	RefreshTokens *RefreshTokenService
 	AccessTokens *AccessTokenService
