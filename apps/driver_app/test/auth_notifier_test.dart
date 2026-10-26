@@ -21,11 +21,13 @@ void main() {
 
   tearDown(() => container.dispose());
 
-  test('initial state is unauthenticated', () {
+  test('initial state is unauthenticated and still initializing', () {
     final state = container.read(authViewModelProvider);
     expect(state.isAuthenticated, isFalse);
     expect(state.isApproved, isFalse);
     expect(state.isLoading, isFalse);
+    // The router holds on the splash while this is true.
+    expect(state.isInitializing, isTrue);
   });
 
   test('verifyOtp stores token and user on success', () async {
@@ -77,6 +79,22 @@ void main() {
     final state = container.read(authViewModelProvider);
     expect(state.isAuthenticated, isTrue);
     expect(state.isApproved, isTrue);
+    // Guard can now route away from the splash.
+    expect(state.isInitializing, isFalse);
+  });
+
+  test('initialize clears isInitializing even when restore throws', () async {
+    when(repo.accessToken).thenAnswer((_) async => 'tok');
+    when(repo.loadMe()).thenThrow(Exception('session expired'));
+
+    final authenticated =
+        await container.read(authViewModelProvider.notifier).initialize();
+
+    expect(authenticated, isFalse);
+    final state = container.read(authViewModelProvider);
+    // Splash must still resolve, not hang forever.
+    expect(state.isInitializing, isFalse);
+    expect(state.error, 'تعذر استعادة الجلسة');
   });
 
   test('initialize without stored token stays unauthenticated', () async {
@@ -86,7 +104,10 @@ void main() {
         await container.read(authViewModelProvider.notifier).initialize();
 
     expect(authenticated, isFalse);
-    expect(container.read(authViewModelProvider).isLoading, isFalse);
+    final state = container.read(authViewModelProvider);
+    expect(state.isLoading, isFalse);
+    // No token: isInitializing cleared so the guard sends us to /login.
+    expect(state.isInitializing, isFalse);
   });
 
   test('logout clears session', () async {
@@ -102,5 +123,7 @@ void main() {
     final state = container.read(authViewModelProvider);
     expect(state.isAuthenticated, isFalse);
     expect(state.user, isNull);
+    // Logout must not re-show the splash; guard goes straight to /login.
+    expect(state.isInitializing, isFalse);
   });
 }

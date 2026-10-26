@@ -9,12 +9,17 @@ class AuthState {
     this.token,
     this.isLoading = false,
     this.error,
+    this.isInitializing = true,
   });
 
   final AuthUser? user;
   final String? token;
   final bool isLoading;
   final String? error;
+
+  /// True until the one-time session restore has completed. The router uses
+  /// this to hold on the splash until auth is known.
+  final bool isInitializing;
 
   bool get isAuthenticated => token != null && token!.isNotEmpty;
   bool get isApproved => user?.verificationStatus == VerificationStatus.approved;
@@ -24,6 +29,7 @@ class AuthState {
     String? token,
     bool? isLoading,
     String? error,
+    bool? isInitializing,
     bool clearSession = false,
     bool clearError = false,
   }) {
@@ -32,8 +38,21 @@ class AuthState {
       token: clearSession ? null : (token ?? this.token),
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
+      isInitializing: isInitializing ?? this.isInitializing,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is AuthState &&
+      other.user == user &&
+      other.token == token &&
+      other.isLoading == isLoading &&
+      other.error == error &&
+      other.isInitializing == isInitializing;
+
+  @override
+  int get hashCode => Object.hash(user, token, isLoading, error, isInitializing);
 }
 
 class AuthNotifier extends Notifier<AuthState> {
@@ -48,13 +67,26 @@ class AuthNotifier extends Notifier<AuthState> {
       final token = await _authRepository.accessToken;
       if (token != null && token.isNotEmpty) {
         final user = await _authRepository.loadMe();
-        state = state.copyWith(token: token, user: user, isLoading: false);
+        state = state.copyWith(
+          token: token,
+          user: user,
+          isLoading: false,
+          isInitializing: false,
+        );
         return true;
       }
-      state = state.copyWith(isLoading: false);
+      return false;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        isInitializing: false,
+        error: 'تعذر استعادة الجلسة',
+      );
       return false;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // Guarantees the splash resolves even when the token path is taken or an
+      // error was thrown above.
+      state = state.copyWith(isLoading: false, isInitializing: false);
     }
   }
 
@@ -114,7 +146,9 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> logout() async {
     await _authRepository.logout();
-    state = const AuthState();
+    // isInitializing: false → the guard sends us straight to /login instead of
+    // re-showing the splash.
+    state = const AuthState(isInitializing: false);
   }
 }
 

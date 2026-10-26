@@ -14,9 +14,41 @@ import 'ui/features/ride_tracking/views/ride_tracking_screen.dart';
 import 'ui/features/earnings/views/earnings_screen.dart';
 import 'ui/features/earnings/views/payout_request_screen.dart';
 
+/// Routes reachable before the session restore has completed.
+const _publicRoutes = <String>{'/login', '/register', '/otp'};
+
 final goRouterProvider = Provider<GoRouter>((ref) {
+  // Bumping this notifier re-runs [redirect]; we fire it on every auth change
+  // so login, logout, and approval transitions re-route automatically.
+  final refresh = ValueNotifier<int>(0);
+  ref.onDispose(refresh.dispose);
+  ref.listen(authViewModelProvider, (_, __) => refresh.value++);
+
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: refresh,
+    redirect: (context, state) {
+      final auth = ref.read(authViewModelProvider);
+      final loc = state.matchedLocation;
+
+      // Splash: hold until the session restore finishes, then hand off to the
+      // same rules the guards below apply.
+      if (loc == '/') {
+        if (auth.isInitializing) return null;
+        if (!auth.isAuthenticated) return '/login';
+        return auth.isApproved ? '/home' : '/documents';
+      }
+
+      // The auth funnel is always reachable.
+      if (_publicRoutes.contains(loc)) return null;
+
+      // Every other route requires a session; unverified drivers are pinned to
+      // document upload until they are approved.
+      if (!auth.isAuthenticated) return '/login';
+      if (!auth.isApproved) return loc == '/documents' ? null : '/documents';
+      if (loc == '/documents') return '/home';
+      return null;
+    },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
@@ -45,7 +77,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Splash / auth gate. Initializes the session once, then routes by auth state.
+/// Splash: kicks off the one-time session restore. The GoRouter [redirect]
+/// owns where the user actually goes; this widget only shows a spinner until
+/// auth is resolved.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -58,22 +92,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeSession();
+      // initialize() never throws (it records errors in AuthState), so this is
+      // a safe fire-and-forget; the redirect reacts to the resulting state.
+      ref.read(authViewModelProvider.notifier).initialize();
     });
-  }
-
-  Future<void> _initializeSession() async {
-    try {
-      final authenticated = await ref.read(authViewModelProvider.notifier).initialize();
-      if (!mounted) return;
-      if (authenticated) {
-        context.go(ref.read(authViewModelProvider).isApproved ? '/home' : '/documents');
-      } else {
-        context.go('/login');
-      }
-    } catch (_) {
-      if (mounted) context.go('/login');
-    }
   }
 
   @override
@@ -102,10 +124,10 @@ class ProfileScreen extends ConsumerWidget {
             SizedBox(
               height: 48,
               child: OutlinedButton(
-                onPressed: () async {
-                  await ref.read(authViewModelProvider.notifier).logout();
-                  if (context.mounted) context.go('/login');
-                },
+                // No explicit navigation: logout clears the session, the auth
+                // listener bumps refreshListenable, and the redirect routes to
+                // /login.
+                onPressed: () => ref.read(authViewModelProvider.notifier).logout(),
                 child: const Text('تسجيل الخروج'),
               ),
             ),
