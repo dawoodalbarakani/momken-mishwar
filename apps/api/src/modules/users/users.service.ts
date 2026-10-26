@@ -12,17 +12,17 @@ export class UsersService {
       const exists = await this.prisma.users.findUnique({ where: { email: data.email } });
       if (exists) throw new ConflictException('البريد الإلكتروني مستخدم مسبقاً', 'Email already in use');
     }
-    let passwordHash: string | undefined;
+    let password_hash: string | undefined;
     if (data.password) {
-      passwordHash = await bcrypt.hash(data.password, 10);
+      password_hash = await bcrypt.hash(data.password, 10);
     }
     return this.prisma.users.create({
       data: {
-        phoneE164: data.phoneE164 ?? null,
+        phone_e164: data.phone_e164 ?? null,
         email: data.email ?? null,
-        displayName: data.displayName ?? null,
+        display_name: data.display_name ?? null,
         locale: data.locale ?? 'ar',
-        passwordHash,
+        password_hash,
       },
     });
   }
@@ -37,16 +37,16 @@ export class UsersService {
     return this.prisma.users.findUnique({ where: { email } });
   }
 
-  async updatePassword(userId: string, password: string) {
-    const passwordHash = await bcrypt.hash(password, 10);
-    return this.prisma.users.update({ where: { id: userId }, data: { passwordHash } });
+  async updatePassword(user_id: string, password: string) {
+    const password_hash = await bcrypt.hash(password, 10);
+    return this.prisma.users.update({ where: { id: user_id }, data: { password_hash } });
   }
 
-  async grantRole(userId: string, role: string, grantedBy: string) {
-    return this.prisma.userRoles.upsert({
-      where: { userId_role: { userId, role } },
+  async grantRole(user_id: string, role: string, granted_by: string) {
+    return this.prisma.user_roles.upsert({
+      where: { user_id_role: { user_id, role } },
       update: {},
-      create: { userId, role, grantedBy },
+      create: { user_id, role, granted_by },
     });
   }
 }

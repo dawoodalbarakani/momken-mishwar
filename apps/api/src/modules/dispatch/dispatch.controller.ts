@@ -18,18 +18,18 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 export class DispatchController {
   constructor(private readonly service: DispatchService) {}
 
-  @Post('rides/:rideId/search')
+  @Post('rides/:ride_id/search')
   @ApiOperation({ summary: 'Start driver search and create offers' })
   @Roles('SYSTEM')
-  search(@Param('rideId') rideId: string) {
-    return this.service.search(rideId);
+  search(@Param('ride_id') ride_id: string) {
+    return this.service.search(ride_id);
   }
 
   @Post('offers/:offerId/accept')
   @ApiOperation({ summary: 'Accept a ride offer (atomic assignment)' })
   @Roles('DRIVER')
-  accept(@Param('offerId') offerId: string, @Body() body: { vehicleId: string }, @CurrentUser() user: any) {
-    return this.service.acceptOffer({ offerId, driverId: user.sub, vehicleId: body.vehicleId });
+  accept(@Param('offerId') offerId: string, @Body() body: { vehicle_id: string }, @CurrentUser() user: any) {
+    return this.service.acceptOffer({ offerId, driver_id: user.sub, vehicle_id: body.vehicle_id });
   }
 
   @Post('sweep')

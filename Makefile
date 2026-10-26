@@ -48,8 +48,8 @@ db\:logs: ## Follow database service logs
 db\:status: ## Show database service status
 	$(DC) ps db
 
-db\:migrate: ## Apply SQL migrations in order using DATABASE_URL
-	cd $(DATABASE_DIR) && DATABASE_URL=$(DATABASE_URL) ./run-migrations.sh
+db\:migrate: ## Apply Prisma migrations to the database
+	cd $(API_DIR) && DATABASE_URL=$(DATABASE_URL) pnpm prisma migrate dev --schema=src/prisma/schema.prisma --url=$(DATABASE_URL) -n auto
 
 db\:seed: ## Seed reference data into the database
 	psql "$(DATABASE_URL)" -v ON_ERROR_STOP=1 -f database/seeds/001_reference_data.sql
@@ -64,37 +64,37 @@ db\:test\:up: ## Start the test database service (port 5433)
 # ---------------------------------------------------------------
 
 api\:install: ## Install API dependencies
-	cd $(API_DIR) && npm install
+	cd $(API_DIR) && pnpm install
 
 api\:typecheck: ## Run API typecheck
-	cd $(API_DIR) && npm run typecheck
+	cd $(API_DIR) && pnpm run typecheck
 
 api\:build: ## Build the API
-	cd $(API_DIR) && npm run build
+	cd $(API_DIR) && pnpm run build
 
 api\:start: ## Start the API (production)
-	cd $(API_DIR) && npm run start
+	cd $(API_DIR) && pnpm run start
 
 api\:start\:dev: ## Start the API in watch mode
-	cd $(API_DIR) && npm run start:dev
+	cd $(API_DIR) && pnpm run start:dev
 
 api\:test: ## Run API tests (vitest run)
-	cd $(API_DIR) && npm run test
+	cd $(API_DIR) && pnpm run test
 
 api\:test\:domain: ## Run API domain tests
-	cd $(API_DIR) && npm run test:domain
+	cd $(API_DIR) && pnpm run test:domain
 
 api\:test\:cov: ## Run API tests with coverage
-	cd $(API_DIR) && npm run test:cov
+	cd $(API_DIR) && pnpm run test:cov
 
 api\:prisma\:generate: ## Generate Prisma client for the API
-	cd $(API_DIR) && npm run prisma:generate
+	cd $(API_DIR) && pnpm run prisma:generate
 
 api\:prisma\:db-pull: ## Pull Prisma schema from the database
-	cd $(API_DIR) && npm run prisma:db-pull
+	cd $(API_DIR) && pnpm run prisma:db-pull
 
 api\:prisma\:seed: ## Seed the API database via Prisma
-	cd $(API_DIR) && npm run prisma:seed
+	cd $(API_DIR) && pnpm run prisma:seed
 
 # ---------------------------------------------------------------
 # Admin targets (Next.js)

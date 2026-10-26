@@ -1,14 +1,16 @@
 "use client";
-"use strict";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { setToken, setUser, logout } from "@/lib/auth";
-import { Mail, Shield, Lock } from "lucide-react";
+import { Shield, Lock } from "lucide-react";
 
 const LoginSchema = z.object({
   email: z.string().email("الرجاء إدخال بريد إلكتروني صحيح"),
@@ -35,7 +37,7 @@ export default function LoginPage() {
       const parsed = LoginSchema.safeParse(form);
       if (!parsed.success) {
         const fieldErrors: Record<string, string> = {};
-        parsed.error.errors.forEach((err) => {
+        parsed.error.issues.forEach((err) => {
           fieldErrors[err.path[0] as string] = err.message;
         });
         setErrors(fieldErrors);
@@ -84,52 +86,56 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-full max-w-md p-6 shadow-xl">
-        <div className="flex items-center gap-2 mb-6">
-          <Shield className="w-8 h-8 text-brand-600" />
-          <h1 className="text-xl font-bold">تسجيل دخول الموظف</h1>
-        </div>
-        <p className="text-sm text-gray-600 mb-6">
-          لوحة إدارة منصة ميشوار اليمن. أدخل بريدك الإلكتروني وكلمة المرور.
-        </p>
-        {message.text && (
-          <div className={`mb-4 p-3 rounded text-sm ${message.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"}`}>
-            {message.text}
+    <div className="min-h-screen flex items-center justify-center bg-muted">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="flex flex-row items-center gap-2">
+          <Shield className="size-8 text-primary" />
+          <div>
+            <CardTitle>تسجيل دخول الموظف</CardTitle>
+            <CardDescription>لوحة إدارة منصة ميشوار اليمن. أدخل بريدك الإلكتروني وكلمة المرور.</CardDescription>
           </div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">البريد الإلكتروني</label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="admin@mishwar.example"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              error={!!errors.email}
-            />
-            {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">كلمة المرور</label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              error={!!errors.password}
-            />
-            {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
-          </div>
-          <Button type="submit" disabled={submitting} className="w-full" loading={submitting}>
-            <Lock className="w-4 h-4 mr-2" /> دخول
-          </Button>
-        </form>
-        <p className="mt-6 text-xs text-gray-500 text-center">
-          رمز المصادقة يُخزّن في كوكي آمن SameSite=Lax. لا تُخزّن أسرار في المتصفح.
-        </p>
+        </CardHeader>
+        <CardContent>
+          {message.text && (
+            <Alert variant={message.type === "success" ? "default" : "destructive"} className="mb-4">
+              <AlertDescription>{message.text}</AlertDescription>
+            </Alert>
+          )}
+          <form onSubmit={handleSubmit}>
+            <FieldGroup>
+              <Field data-invalid={!!errors.email}>
+                <FieldLabel htmlFor="email">البريد الإلكتروني</FieldLabel>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@mishwar.example"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  aria-invalid={!!errors.email}
+                />
+                {errors.email && <FieldDescription className="text-destructive">{errors.email}</FieldDescription>}
+              </Field>
+              <Field data-invalid={!!errors.password}>
+                <FieldLabel htmlFor="password">كلمة المرور</FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  aria-invalid={!!errors.password}
+                />
+                {errors.password && <FieldDescription className="text-destructive">{errors.password}</FieldDescription>}
+              </Field>
+              <Button type="submit" disabled={submitting} className="w-full" loading={submitting}>
+                <Lock data-icon="inline-start" /> دخول
+              </Button>
+            </FieldGroup>
+          </form>
+          <p className="mt-6 text-xs text-muted-foreground text-center">
+            رمز المصادقة يُخزّن في كوكي آمن SameSite=Lax. لا تُخزّن أسرار في المتصفح.
+          </p>
+        </CardContent>
       </Card>
     </div>
   );

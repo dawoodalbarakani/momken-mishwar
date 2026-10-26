@@ -25,9 +25,9 @@ export class AuditLogsController {
   create(@Body() body: any, @CurrentUser() user: any) {
     return this.service.log({
       ...body,
-      actorUserId: user?.sub,
-      actorRole: user?.roles?.[0],
-      requestId: body.requestId,
+      actor_user_id: user?.sub,
+      actor_role: user?.roles?.[0],
+      request_id: body.request_id,
     });
   }
 

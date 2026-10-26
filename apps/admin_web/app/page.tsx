@@ -1,7 +1,7 @@
 import { parseJwt, type JwtPayload } from "@/lib/auth";
 import { getServerToken } from "@/lib/auth-server";
 import { apiRequest, ApiResponseError } from "@/lib/api";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Truck, DollarSign, Users, Clock, AlertTriangle } from "lucide-react";
@@ -54,15 +54,15 @@ function StatCard({
   subtitle?: React.ReactNode;
 }) {
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
-          {subtitle && <div className="mt-2">{subtitle}</div>}
-        </div>
-        <div className="p-2 rounded bg-brand-50 text-brand-600">{icon}</div>
-      </div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <div className="p-2 rounded-md bg-primary text-primary-foreground">{icon}</div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        {subtitle && <div className="mt-2">{subtitle}</div>}
+      </CardContent>
     </Card>
   );
 }
@@ -80,13 +80,13 @@ export default async function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold">لوحة التحكم</h1>
-          <p className="text-gray-600">مرحباً، {user?.email || "المستخدم"}</p>
+          <p className="text-muted-foreground">مرحباً، {user?.email || "المستخدم"}</p>
         </div>
         <div className="flex gap-2">
           {canAccessAudit && (
             <a
               href="/audit"
-              className="text-sm px-3 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+              className="text-sm px-3 py-2 rounded-md bg-muted text-muted-foreground hover:bg-muted/80"
             >
               سجل التدقيق
             </a>
@@ -98,9 +98,9 @@ export default async function DashboardPage() {
         <StatCard
           title="الرحلات حسب الحالة"
           value={Object.values(ridesByStatus).reduce((a, b) => a + b, 0)}
-          icon={<Truck className="w-5 h-5" />}
+          icon={<Truck className="size-5" />}
           subtitle={
-            <div className="text-xs space-y-1">
+            <div className="text-xs flex flex-col gap-1">
               {Object.entries(ridesByStatus).map(([k, v]) => (
                 <div key={k} className="flex justify-between">
                   <span>{k}</span>
@@ -110,25 +110,27 @@ export default async function DashboardPage() {
             </div>
           }
         />
-        <StatCard title="الرحلات المكتملة" value={stats.completed_rides ?? 0} icon={<DollarSign className="w-5 h-5" />} />
-        <StatCard title="الرحلات الملغاة" value={stats.cancelled_rides ?? 0} icon={<AlertTriangle className="w-5 h-5" />} />
-        <StatCard title="السائقون المتصلون" value={stats.online_drivers ?? 0} icon={<Users className="w-5 h-5" />} />
-        <StatCard title="طلبات بلا سائق" value={stats.no_driver_requests ?? 0} icon={<Clock className="w-5 h-5" />} />
+        <StatCard title="الرحلات المكتملة" value={stats.completed_rides ?? 0} icon={<DollarSign className="size-5" />} />
+        <StatCard title="الرحلات الملغاة" value={stats.cancelled_rides ?? 0} icon={<AlertTriangle className="size-5" />} />
+        <StatCard title="السائقون المتصلون" value={stats.online_drivers ?? 0} icon={<Users className="size-5" />} />
+        <StatCard title="طلبات بلا سائق" value={stats.no_driver_requests ?? 0} icon={<Clock className="size-5" />} />
         <StatCard
           title="إجمالي الأجور والعمولات"
           value={`${stats.total_fares ?? "0"} / ${stats.total_commissions ?? "0"} ريال`}
-          icon={<DollarSign className="w-5 h-5" />}
+          icon={<DollarSign className="size-5" />}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-4">
-          <div>
-            <h2 className="font-bold text-lg mb-4">ملخص الحالة</h2>
-            <p className="text-gray-600 text-sm">
+        <Card>
+          <CardHeader>
+            <CardTitle>ملخص الحالة</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground text-sm">
               تستدعي هذه الصفحة `GET /v1/admin/dashboard/stats` من الخادم باستخدام Server Component.
             </p>
-          </div>
+          </CardContent>
         </Card>
         <Table>
           <TableHeader>

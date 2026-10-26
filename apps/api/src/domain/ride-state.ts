@@ -36,21 +36,21 @@ export type ActorRole = 'CUSTOMER' | 'DRIVER' | 'SYSTEM' | 'STAFF';
 
 export interface Actor {
   role: ActorRole;
-  userId?: string;
+  user_id?: string;
 }
 
 export interface RideSnapshot {
   status: RideStatus;
-  customerId: string;
+  customer_id: string;
   /** Null until a driver is assigned. */
-  driverId: string | null;
+  driver_id: string | null;
 }
 
 export interface TransitionContext {
   /** Required for TRIP_STARTED: the start code was verified by the server. */
   startCodeVerified?: boolean;
   /** Required for CANCEL. */
-  cancelReasonCode?: string;
+  cancel_reason_code?: string;
   /** Required for DRIVER_ASSIGNED: the driver that won the atomic assignment. */
   assignedDriverId?: string;
 }
@@ -59,7 +59,7 @@ export interface TransitionResult {
   to: RideStatus;
   /** Present for CANCEL: who cancelled (stored on the ride and in ride_events). */
   cancelledBy?: ActorRole;
-  cancelReasonCode?: string;
+  cancel_reason_code?: string;
 }
 
 export class RideTransitionError extends Error {
@@ -90,11 +90,11 @@ const DRIVER_STEPS: Partial<Record<RideEvent, { from: RideStatus; to: RideStatus
 };
 
 function isAssignedDriver(ride: RideSnapshot, actor: Actor): boolean {
-  return actor.role === 'DRIVER' && !!actor.userId && ride.driverId === actor.userId;
+  return actor.role === 'DRIVER' && !!actor.user_id && ride.driver_id === actor.user_id;
 }
 
 function isOwnerCustomer(ride: RideSnapshot, actor: Actor): boolean {
-  return actor.role === 'CUSTOMER' && !!actor.userId && ride.customerId === actor.userId;
+  return actor.role === 'CUSTOMER' && !!actor.user_id && ride.customer_id === actor.user_id;
 }
 
 function invalid(ride: RideSnapshot, event: RideEvent): never {
@@ -117,7 +117,7 @@ export function transition(
     case 'DRIVER_ASSIGNED': {
       if (ride.status !== 'SEARCHING') invalid(ride, event);
       // Assignment is a dispatch decision made on behalf of the accepting driver.
-      if (actor.role !== 'SYSTEM' && !(actor.role === 'DRIVER' && actor.userId === ctx.assignedDriverId)) {
+      if (actor.role !== 'SYSTEM' && !(actor.role === 'DRIVER' && actor.user_id === ctx.assignedDriverId)) {
         forbidden(event, actor);
       }
       if (!ctx.assignedDriverId) {
@@ -146,7 +146,7 @@ export function transition(
     }
 
     case 'CANCEL': {
-      if (!ctx.cancelReasonCode) {
+      if (!ctx.cancel_reason_code) {
         throw new RideTransitionError('REASON_REQUIRED', 'CANCEL requires a reason code');
       }
       const cancelledBy = actor.role;
@@ -163,7 +163,7 @@ export function transition(
       } else {
         invalid(ride, event);
       }
-      return { to: 'CANCELLED', cancelledBy, cancelReasonCode: ctx.cancelReasonCode };
+      return { to: 'CANCELLED', cancelledBy, cancel_reason_code: ctx.cancel_reason_code };
     }
   }
 }

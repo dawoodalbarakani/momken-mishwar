@@ -5,24 +5,24 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 export class CustomersService {
   constructor(private prisma: PrismaService) {}
 
-  async getOrCreateProfile(userId: string) {
-    let profile = await this.prisma.customerProfiles.findUnique({ where: { userId } });
+  async getOrCreateProfile(user_id: string) {
+    let profile = await this.prisma.customer_profiles.findUnique({ where: { user_id } });
     if (!profile) {
-      profile = await this.prisma.customerProfiles.create({ data: { userId } });
+      profile = await this.prisma.customer_profiles.create({ data: { user_id } });
     }
     return profile;
   }
 
-  async listSavedPlaces(customerId: string) {
-    return this.prisma.savedPlaces.findMany({ where: { customerId }, orderBy: { createdAt: 'desc' } });
+  async listSavedPlaces(customer_id: string) {
+    return this.prisma.saved_places.findMany({ where: { customer_id }, orderBy: { created_at: 'desc' } });
   }
 
-  async addSavedPlace(params: { customerId: string; label: string; addressText?: string }) {
-    return this.prisma.savedPlaces.create({
+  async addSavedPlace(params: { customer_id: string; label: string; address_text?: string }) {
+    return (this.prisma.saved_places as any).create({
       data: {
-        customerId: params.customerId,
+        customer_id: params.customer_id,
         label: params.label,
-        addressText: params.addressText ?? null,
+        address_text: params.address_text ?? null,
       },
     });
   }

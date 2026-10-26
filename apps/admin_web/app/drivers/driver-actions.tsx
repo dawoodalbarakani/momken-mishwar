@@ -4,7 +4,9 @@ import { useState } from "react";
 import { getToken } from "@/lib/auth";
 import { apiRequest, ApiResponseError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogTitle, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Check, X, Pause } from "lucide-react";
 
 type DriverAction = "approve" | "reject" | "suspend";
@@ -69,35 +71,37 @@ export function DriverRowActions({ driver, token }: DriverRowActionsProps) {
               setOpen(true);
             }}
           >
-            <Icon className="w-3 h-3 mr-1" /> {ar}
+            <Icon data-icon="inline-start" /> {ar}
           </Button>
         );
       })}
       {open && (
         <Dialog
           open={open}
-          onClose={() => setOpen(false)}
-          title="تأكيد الإجراء"
+          onOpenChange={(isOpen) => setOpen(isOpen)}
         >
-          <div className="space-y-3">
-            <label className="block text-sm font-medium">السبب</label>
-            <textarea
-              className="w-full border rounded p-2 text-sm"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-            {error && (
-              <p className="text-xs text-red-600">{error}</p>
-            )}
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                إلغاء
-              </Button>
-              <Button onClick={handleExecute} loading={submitting} disabled={submitting}>
-                تنفيذ
-              </Button>
+          <DialogContent>
+            <DialogTitle>تأكيد الإجراء</DialogTitle>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="reason">السبب</Label>
+              <Textarea
+                id="reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+              {error && (
+                <p className="text-xs text-red-600">{error}</p>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpen(false)}>
+                  إلغاء
+                </Button>
+                <Button onClick={handleExecute} loading={submitting} disabled={submitting}>
+                  تنفيذ
+                </Button>
+              </DialogFooter>
             </div>
-          </div>
+          </DialogContent>
         </Dialog>
       )}
     </div>

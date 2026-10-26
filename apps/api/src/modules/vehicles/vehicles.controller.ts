@@ -23,7 +23,7 @@ export class VehiclesController {
   @ApiOperation({ summary: 'Register a vehicle for a driver' })
   @Roles('DRIVER')
   create(@Body() body: any, @CurrentUser() user: any) {
-    return this.service.create({ ...body, driverId: user.sub });
+    return this.service.create({ ...body, driver_id: user.sub });
   }
 
   @Get('me')

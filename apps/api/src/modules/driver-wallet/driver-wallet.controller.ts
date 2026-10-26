@@ -38,6 +38,6 @@ export class DriverWalletController {
   @ApiOperation({ summary: 'Request a payout (four-eyes: approved by finance/admin)' })
   @Roles('DRIVER')
   requestPayout(@Body() body: any, @CurrentUser() user: any) {
-    return this.service.requestPayout({ ...body, driverId: user.sub, requestedBy: user.sub });
+    return this.service.requestPayout({ ...body, driver_id: user.sub, requested_by: user.sub });
   }
 }

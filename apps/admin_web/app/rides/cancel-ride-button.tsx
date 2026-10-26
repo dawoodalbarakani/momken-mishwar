@@ -41,7 +41,7 @@ export function CancelRideButton({ rideId, token }: CancelRideButtonProps) {
         loading={submitting}
         disabled={submitting}
       >
-        <AlertTriangle className="w-3 h-3 mr-1" /> إلغاء
+        <AlertTriangle data-icon="inline-start" /> إلغاء
       </Button>
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
     </div>

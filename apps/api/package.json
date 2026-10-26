@@ -15,7 +15,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prisma:generate": "prisma generate --schema=src/prisma/schema.prisma",
     "prisma:db-pull": "prisma db pull",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:studio": "prisma studio --schema=src/prisma/schema.prisma --url=$DATABASE_URL",
+    "prisma:migrate:dev": "prisma migrate dev --schema=src/prisma/schema.prisma --url=$DATABASE_URL",
+    "prisma:migrate:deploy": "prisma migrate deploy --schema=src/prisma/schema.prisma --url=$DATABASE_URL",
+    "prisma:migrate:reset": "prisma migrate reset --schema=src/prisma/schema.prisma --url=$DATABASE_URL",
+    "prisma:migrate:status": "prisma migrate status --schema=src/prisma/schema.prisma --url=$DATABASE_URL"
   },
   "engines": {
     "node": ">=22"
@@ -31,7 +36,8 @@
     "@nestjs/swagger": "^12.0.0",
     "@nestjs/terminus": "^12.0.0",
     "@nestjs/websockets": "^12.0.0",
-    "@prisma/client": "5.22.0",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.0.0",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
@@ -53,7 +59,7 @@
     "@types/supertest": "^7.2.1",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
-    "prisma": "5.22.0",
+    "prisma": "^7.0.0",
     "supertest": "^7.3.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",

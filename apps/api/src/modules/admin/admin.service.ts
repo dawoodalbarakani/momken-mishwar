@@ -6,9 +6,8 @@ export class AdminService {
   constructor(private prisma: PrismaService) {}
 
   async listDrivers(query: { status?: string; limit?: number }) {
-    return this.prisma.driverProfiles.findMany({
-      where: query.status ? { verificationStatus: query.status } : {},
-      include: { user: true },
+    return this.prisma.driver_profiles.findMany({
+      where: query.status ? { verification_status: query.status } : {},
       take: Math.min(query.limit ?? 50, 100),
     });
   }
@@ -16,41 +15,41 @@ export class AdminService {
   async listRides(query: { status?: string; limit?: number }) {
     return this.prisma.rides.findMany({
       where: query.status ? { status: query.status } : {},
-      orderBy: { requestedAt: 'desc' },
+      orderBy: { requested_at: 'desc' },
       take: Math.min(query.limit ?? 50, 100),
     });
   }
 
-  async cancelRide(rideId: string, reason: string, staffId: string) {
-    const ride = await this.prisma.rides.findUnique({ where: { id: rideId } });
+  async cancelRide(ride_id: string, reason: string, staffId: string) {
+    const ride = await this.prisma.rides.findUnique({ where: { id: ride_id } });
     if (!ride) throw new NotFoundException('الرحلة غير موجودة', 'Ride not found');
     return this.prisma.rides.update({
-      where: { id: rideId },
-      data: { status: 'CANCELLED', cancelledByRole: 'STAFF', cancelledByUserId: staffId, cancelReasonCode: reason, cancelledAt: new Date() },
+      where: { id: ride_id },
+      data: { status: 'CANCELLED', cancelled_by_role: 'STAFF', cancelled_by_user_id: staffId, cancel_reason_code: reason, cancelled_at: new Date() },
     });
   }
 
-  async listPricingRules(query: { serviceAreaId?: string }) {
-    return this.prisma.pricingRules.findMany({
-      where: query.serviceAreaId ? { serviceAreaId: query.serviceAreaId } : {},
-      orderBy: [{ serviceAreaId: 'asc' }, { version: 'desc' }],
+  async listPricingRules(query: { service_area_id?: string }) {
+    return this.prisma.pricing_rules.findMany({
+      where: query.service_area_id ? { service_area_id: query.service_area_id } : {},
+      orderBy: [{ service_area_id: 'asc' }, { version: 'desc' }],
       take: 100,
     });
   }
 
   async listPayouts(query: { status?: string; limit?: number }) {
-    return this.prisma.driverPayouts.findMany({
+    return this.prisma.driver_payouts.findMany({
       where: query.status ? { status: query.status } : {},
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       take: Math.min(query.limit ?? 50, 100),
     });
   }
 
   async approvePayout(payoutId: string, reviewerId: string) {
-    const payout = await this.prisma.driverPayouts.findUnique({ where: { id: payoutId } });
+    const payout = await this.prisma.driver_payouts.findUnique({ where: { id: payoutId } });
     if (!payout) throw new NotFoundException('التسوية غير موجودة', 'Payout not found');
-    if (payout.requestedBy === reviewerId) throw new Error('FOUR_EYES');
-    return this.prisma.driverPayouts.update({
+    if (payout.requested_by === reviewerId) throw new Error('FOUR_EYES');
+    return this.prisma.driver_payouts.update({
       where: { id: payoutId },
       data: { status: 'APPROVED', reviewedBy: reviewerId, reviewedAt: new Date() },
     });

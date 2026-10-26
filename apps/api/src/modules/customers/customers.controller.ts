@@ -29,7 +29,7 @@ export class CustomersController {
   @Get('me/saved-places')
   @ApiOperation({ summary: 'List saved places' })
   @Roles('CUSTOMER')
-  savedPlaces(@CurrentUser() user: any) {
+  saved_places(@CurrentUser() user: any) {
     return this.service.listSavedPlaces(user.sub);
   }
 
@@ -38,7 +38,7 @@ export class CustomersController {
   @Roles('CUSTOMER')
   add(@Body() body: any, @CurrentUser() user: any) {
     return this.service.getOrCreateProfile(user.sub).then((p) =>
-      this.service.addSavedPlace({ customerId: p.userId, ...body }),
+      this.service.addSavedPlace({ customer_id: p.user_id, ...body }),
     );
   }
 }

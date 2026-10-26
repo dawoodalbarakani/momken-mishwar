@@ -5,23 +5,23 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 export class DriversService {
   constructor(private prisma: PrismaService) {}
 
-  async getProfile(userId: string) {
-    const profile = await this.prisma.driverProfiles.findUnique({ where: { userId } });
+  async getProfile(user_id: string) {
+    const profile = await this.prisma.driver_profiles.findUnique({ where: { user_id } });
     if (!profile) throw new NotFoundException('ملف السائق غير موجود', 'Driver profile not found');
     return profile;
   }
 
-  async setOnline(userId: string, isOnline: boolean) {
-    const profile = await this.getProfile(userId);
-    if (isOnline && profile.verificationStatus !== 'APPROVED') {
+  async setOnline(user_id: string, is_online: boolean) {
+    const profile = await this.getProfile(user_id);
+    if (is_online && profile.verification_status !== 'APPROVED') {
       throw new ForbiddenException('يجب اعتماد السائق قبل التوفر', 'Driver must be approved to go online');
     }
-    return this.prisma.driverProfiles.update({ where: { userId }, data: { isOnline } });
+    return this.prisma.driver_profiles.update({ where: { user_id }, data: { is_online } });
   }
 
-  async list(query: { serviceAreaId?: string; limit?: number }) {
-    return this.prisma.driverProfiles.findMany({
-      where: query.serviceAreaId ? { serviceAreaId: query.serviceAreaId } : {},
+  async list(query: { service_area_id?: string; limit?: number }) {
+    return this.prisma.driver_profiles.findMany({
+      where: query.service_area_id ? { service_area_id: query.service_area_id } : {},
       take: Math.min(query.limit ?? 50, 100),
     });
   }

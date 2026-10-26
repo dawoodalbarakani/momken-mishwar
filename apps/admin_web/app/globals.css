@@ -1,22 +1,50 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  html {
-    scroll-behavior: smooth;
-  }
-  body {
-    @apply bg-gray-50 text-gray-900 antialiased;
-    direction: rtl;
-  }
-  * {
-    box-sizing: border-box;
-  }
+@theme {
+  /* Uber Design System — Color Tokens */
+  --color-primary: #000000;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #efefef;
+  --color-secondary-foreground: #000000;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-muted: #f3f3f3;
+  --color-muted-foreground: #4b4b4b;
+  --color-accent: #000000;
+  --color-accent-foreground: #ffffff;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #000000;
+  --color-card: #ffffff;
+  --color-card-foreground: #000000;
+  --color-border: #000000;
+  --color-input: #000000;
+  --color-ring: #000000;
+  --color-background: #ffffff;
+  --color-foreground: #000000;
+
+  /* Uber Design System — Radius Tokens */
+  /* Standard card: 8px, Featured: 12px, Pill: 999px */
+  --radius-sm: 0.25rem;   /* 4px */
+  --radius-md: 0.5rem;     /* 8px  — standard cards, inputs */
+  --radius-lg: 0.75rem;    /* 12px — featured/promoted cards */
+  --radius-xl: 999px;      /* pill — buttons, chips, badges */
+  --radius-2xl: 999px;     /* pill */
+  --radius-3xl: 999px;     /* pill */
+  --radius-4xl: 999px;     /* pill */
+
+  /* Uber Design System — Shadow Tokens (whisper-soft) */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.16);
+  --shadow-xl: 0 4px 16px rgba(0, 0, 0, 0.16);
 }
 
-@layer components {
-  .container-admin {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
-  }
+body {
+  background-color: #ffffff;
+  color: #000000;
+  direction: rtl;
+}
+
+.container-admin {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
 }

@@ -11,14 +11,14 @@ export class PricingService {
     pickupLon: number;
     destLat: number;
     destLon: number;
-    serviceAreaId?: string;
-    vehicleTypeId?: string;
+    service_area_id?: string;
+    vehicle_type_id?: string;
   }) {
-    const rule = await this.prisma.pricingRules.findFirst({
+    const rule = await this.prisma.pricing_rules.findFirst({
       where: {
         status: 'ACTIVE',
-        ...(params.serviceAreaId ? { serviceAreaId: params.serviceAreaId } : {}),
-        ...(params.vehicleTypeId ? { vehicleTypeId: params.vehicleTypeId } : {}),
+        ...(params.service_area_id ? { service_area_id: params.service_area_id } : {}),
+        ...(params.vehicle_type_id ? { vehicle_type_id: params.vehicle_type_id } : {}),
       },
       orderBy: { version: 'desc' },
     });
@@ -27,11 +27,11 @@ export class PricingService {
     }
 
     // Distance between pickup and destination via PostGIS (geography, meters).
-    const [distRow] = await this.prisma.$queryRaw`
+    const [distRow] = (await this.prisma.$queryRaw`
       SELECT ST_Distance(
         ST_SetSRID(ST_MakePoint(${params.pickupLon}, ${params.pickupLat})::geometry, 4326)::geography,
         ST_SetSRID(ST_MakePoint(${params.destLon}, ${params.destLat})::geometry, 4326)::geography
-      ) AS distance_m`;
+      ) AS distance_m` as any[]);
     const distanceMeters = Number(distRow?.distance_m ?? 0);
     const durationSeconds = Math.ceil(distanceMeters / 5); // rough 5 m/s estimate
 
@@ -39,14 +39,14 @@ export class PricingService {
       id: rule.id,
       version: rule.version,
       mode: rule.mode as any,
-      currency: rule.currencyCode,
-      baseFareMinor: Number(rule.baseFare) * 100,
-      perKmMinor: Number(rule.perKm) * 100,
-      perMinuteMinor: Number(rule.perMinute) * 100,
-      minimumFareMinor: Number(rule.minimumFare) * 100,
+      currency: rule.currency_code,
+      baseFareMinor: Number(rule.base_fare) * 100,
+      perKmMinor: Number(rule.per_km) * 100,
+      perMinuteMinor: Number(rule.per_minute) * 100,
+      minimumFareMinor: Number(rule.minimum_fare) * 100,
       surcharges: (rule.surcharges as any[]) ?? [],
-      commissionBps: rule.commissionBps,
-      roundingStepMinor: Number(rule.roundingStep) * 100,
+      commission_bps: rule.commission_bps,
+      roundingStepMinor: Number(rule.rounding_step) * 100,
     };
 
     const input: QuoteInput = { distanceMeters, durationSeconds };
@@ -54,10 +54,10 @@ export class PricingService {
     return { ...breakdown, ruleVersion: breakdown.ruleVersion, estimated: true };
   }
 
-  async listRules(serviceAreaId?: string) {
-    return this.prisma.pricingRules.findMany({
-      where: serviceAreaId ? { serviceAreaId, status: 'ACTIVE' } : { status: 'ACTIVE' },
-      orderBy: [{ serviceAreaId: 'asc' }, { version: 'desc' }],
+  async listRules(service_area_id?: string) {
+    return this.prisma.pricing_rules.findMany({
+      where: service_area_id ? { service_area_id, status: 'ACTIVE' } : { status: 'ACTIVE' },
+      orderBy: [{ service_area_id: 'asc' }, { version: 'desc' }],
     });
   }
 }

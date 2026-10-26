@@ -12,9 +12,9 @@ const queryRaw = <T>(tx: any) =>
 export class DispatchService {
   constructor(private prisma: PrismaService) {}
 
-  async search(rideId: string) {
+  async search(ride_id: string) {
     return this.prisma.tx(async (tx) => {
-      const [ride] = await queryRaw<any[]>(tx)`SELECT * FROM rides WHERE id = ${rideId} FOR UPDATE`;
+      const [ride] = await queryRaw<any[]>(tx)`SELECT * FROM rides WHERE id = ${ride_id} FOR UPDATE`;
       if (!ride) throw new NotFoundException('الرحلة غير موجودة', 'Ride not found');
       if (ride.status !== 'SEARCHING' || ride.driver_id !== null) {
         throw new BadRequestException('الرحلة ليست في حالة بحث', 'Ride is not searching');
@@ -22,24 +22,24 @@ export class DispatchService {
 
       // Concurrent/retried search calls for the same ride serialize on the ride
       // row. Return existing live offers rather than creating duplicate batches.
-      const existing = await tx.rideOffers.findMany({
-        where: { rideId, status: 'PENDING', expiresAt: { gt: new Date() } },
-        orderBy: { offeredAt: 'asc' },
+      const existing = await tx.ride_offers.findMany({
+        where: { ride_id, status: 'PENDING', expires_at: { gt: new Date() } },
+        orderBy: { offered_at: 'asc' },
       });
       if (existing.length > 0) {
-        return { rideId, offers: existing, expiresAt: existing.reduce((latest, o) => o.expiresAt > latest ? o.expiresAt : latest, existing[0].expiresAt), replayed: true };
+        return { ride_id, offers: existing, expires_at: existing.reduce((latest, o) => o.expires_at > latest ? o.expires_at : latest, existing[0].expires_at), replayed: true };
       }
-      await tx.rideOffers.updateMany({
-        where: { rideId, status: 'PENDING', expiresAt: { lte: new Date() } },
-        data: { status: 'EXPIRED', respondedAt: new Date() },
+      await tx.ride_offers.updateMany({
+        where: { ride_id, status: 'PENDING', expires_at: { lte: new Date() } },
+        data: { status: 'EXPIRED', responded_at: new Date() },
       });
 
-      const settings = await tx.dispatchSettings.findUnique({ where: { serviceAreaId: ride.service_area_id } });
+      const settings = await tx.dispatch_settings.findUnique({ where: { service_area_id: ride.service_area_id } });
       if (!settings) throw new BadRequestException('لا توجد إعدادات إسناد لهذه المنطقة', 'No dispatch settings for area');
 
       const [pickup] = await queryRaw<Array<{ lon: number; lat: number }>>(tx)`
         SELECT ST_X(pickup::geometry) AS lon, ST_Y(pickup::geometry) AS lat
-        FROM rides WHERE id = ${rideId}`;
+        FROM rides WHERE id = ${ride_id}`;
       const pickupLon = Number(pickup?.lon);
       const pickupLat = Number(pickup?.lat);
 
@@ -54,7 +54,7 @@ export class DispatchService {
           AND dp.verification_status = 'APPROVED'
           AND dp.service_area_id = ${ride.service_area_id}
           AND dp.last_location IS NOT NULL
-          AND dp.last_location_at > now() - (${settings.locationMaxAgeSeconds} * interval '1 second')
+          AND dp.last_location_at > now() - (${settings.location_max_age_seconds} * interval '1 second')
           AND NOT EXISTS (
             SELECT 1 FROM rides r
             WHERE r.driver_id = dp.user_id
@@ -62,42 +62,42 @@ export class DispatchService {
           )
           AND NOT EXISTS (
             SELECT 1 FROM ride_offers ro
-            WHERE ro.ride_id = ${rideId}
+            WHERE ro.ride_id = ${ride_id}
               AND ro.driver_id = dp.user_id
               AND ro.status = 'PENDING'
               AND ro.expires_at > now()
           )
           AND ST_DWithin(dp.last_location,
-            ST_SetSRID(ST_MakePoint(${pickupLon}, ${pickupLat})::geometry, 4326)::geography, ${settings.searchRadiusM})
+            ST_SetSRID(ST_MakePoint(${pickupLon}, ${pickupLat})::geometry, 4326)::geography, ${settings.search_radius_m})
         ORDER BY distance_m
-        LIMIT ${settings.maxCandidates}`;
+        LIMIT ${settings.max_candidates}`;
 
-      const batch = candidates.slice(0, settings.offerBatchSize);
-      if (batch.length === 0) return { rideId, offers: [], expiresAt: null, replayed: false };
+      const batch = candidates.slice(0, settings.offer_batch_size);
+      if (batch.length === 0) return { ride_id, offers: [], expires_at: null, replayed: false };
 
-      const priorRound = await tx.rideOffers.aggregate({ where: { rideId }, _max: { roundNo: true } });
-      const roundNo = (priorRound._max.roundNo ?? 0) + 1;
-      const expiresAt = new Date(Date.now() + settings.offerTtlSeconds * 1000);
-      const offers = await Promise.all(batch.map((candidate) => tx.rideOffers.create({
+      const priorRound = await tx.ride_offers.aggregate({ where: { ride_id }, _max: { round_no: true } });
+      const round_no = (priorRound._max.round_no ?? 0) + 1;
+      const expires_at = new Date(Date.now() + settings.offer_ttl_seconds * 1000);
+      const offers = await Promise.all(batch.map((candidate) => tx.ride_offers.create({
         data: {
-          rideId,
-          driverId: candidate.driver_id,
-          roundNo,
-          distanceToPickupM: Number(candidate.distance_m ?? 0),
-          expiresAt,
+          ride_id,
+          driver_id: candidate.driver_id,
+          round_no,
+          distance_to_pickup_m: Number(candidate.distance_m ?? 0),
+          expires_at,
         },
       })));
-      return { rideId, offers, expiresAt, replayed: false };
+      return { ride_id, offers, expires_at, replayed: false };
     });
   }
 
-  async acceptOffer(params: { offerId: string; driverId: string; vehicleId: string }) {
+  async acceptOffer(params: { offerId: string; driver_id: string; vehicle_id: string }) {
     return this.prisma.tx(async (tx) => {
       // Discover the ride id without locking the offer, then always lock in the
       // same order: ride -> offer -> driver. This avoids the deadlock where two
       // acceptors each lock a different offer and then cancel each other's row.
       const [offerRef] = await queryRaw<Array<{ ride_id: string }>>(tx)`
-        SELECT ride_id FROM ride_offers WHERE id = ${params.offerId} AND driver_id = ${params.driverId}`;
+        SELECT ride_id FROM ride_offers WHERE id = ${params.offerId} AND driver_id = ${params.driver_id}`;
       if (!offerRef) throw new BadRequestException('العرض غير متاح للقبول', 'Offer not available');
 
       const [ride] = await queryRaw<any[]>(tx)`
@@ -108,7 +108,7 @@ export class DispatchService {
 
       const [offer] = await queryRaw<any[]>(tx)`
         SELECT * FROM ride_offers
-        WHERE id = ${params.offerId} AND driver_id = ${params.driverId}
+        WHERE id = ${params.offerId} AND driver_id = ${params.driver_id}
         FOR UPDATE`;
       if (!offer || offer.status !== 'PENDING') {
         throw new BadRequestException('العرض غير متاح للقبول', 'Offer not available');
@@ -123,7 +123,7 @@ export class DispatchService {
         SELECT dp.verification_status, dp.is_online, dp.service_area_id, u.status
         FROM driver_profiles dp
         JOIN users u ON u.id = dp.user_id
-        WHERE dp.user_id = ${params.driverId}
+        WHERE dp.user_id = ${params.driver_id}
         FOR UPDATE OF dp`;
       if (!driverRow) throw new BadRequestException('ملف السائق غير موجود', 'Driver profile not found');
       const d = driverRow;
@@ -136,7 +136,7 @@ export class DispatchService {
 
       const activeRides = await queryRaw<Array<{ id: string }>>(tx)`
         SELECT id FROM rides
-        WHERE driver_id = ${params.driverId}
+        WHERE driver_id = ${params.driver_id}
           AND status IN ('ASSIGNED','ARRIVING','ARRIVED','IN_PROGRESS')
         LIMIT 1`;
       if (activeRides.length > 0) {
@@ -145,26 +145,26 @@ export class DispatchService {
 
       const [vehicle] = await queryRaw<any[]>(tx)`
         SELECT id FROM vehicles
-        WHERE id = ${params.vehicleId}
-          AND driver_id = ${params.driverId}
+        WHERE id = ${params.vehicle_id}
+          AND driver_id = ${params.driver_id}
           AND vehicle_type_id = ${ride.vehicle_type_id}
           AND is_active = true
         FOR UPDATE`;
       if (!vehicle) throw new BadRequestException('المركبة غير صالحة لهذا السائق أو الرحلة', 'Vehicle is not active or does not belong to this driver');
 
-      const settings = await tx.dispatchSettings.findUnique({ where: { serviceAreaId: ride.service_area_id } });
-      const ttlMinutes = Number(settings?.startCodeTtlMinutes ?? 15);
+      const settings = await tx.dispatch_settings.findUnique({ where: { service_area_id: ride.service_area_id } });
+      const ttlMinutes = Number(settings?.start_code_ttl_minutes ?? 15);
       const nonce = newStartCodeNonce();
-      const startCodeExpiresAt = new Date(now.getTime() + ttlMinutes * 60 * 1000);
+      const start_code_expires_at = new Date(now.getTime() + ttlMinutes * 60 * 1000);
 
       const [assigned] = await queryRaw<any[]>(tx)`
         UPDATE rides
         SET status = 'ASSIGNED',
-            driver_id = ${params.driverId},
-            vehicle_id = ${params.vehicleId},
+            driver_id = ${params.driver_id},
+            vehicle_id = ${params.vehicle_id},
             assigned_at = ${now},
             start_code_nonce = ${nonce},
-            start_code_expires_at = ${startCodeExpiresAt},
+            start_code_expires_at = ${start_code_expires_at},
             version = version + 1
         WHERE id = ${offer.ride_id}
           AND status = 'SEARCHING'
@@ -172,22 +172,22 @@ export class DispatchService {
         RETURNING *`;
       if (!assigned) throw new ConflictException('تم إسناد الرحلة لسائق آخر بالفعل', 'Ride already assigned');
 
-      await tx.rideOffers.update({
+      await tx.ride_offers.update({
         where: { id: params.offerId },
-        data: { status: 'ACCEPTED', respondedAt: now },
+        data: { status: 'ACCEPTED', responded_at: now },
       });
-      await tx.rideOffers.updateMany({
-        where: { rideId: offer.ride_id, id: { not: params.offerId }, status: 'PENDING' },
-        data: { status: 'CANCELLED', respondedAt: now },
+      await tx.ride_offers.updateMany({
+        where: { ride_id: offer.ride_id, id: { not: params.offerId }, status: 'PENDING' },
+        data: { status: 'CANCELLED', responded_at: now },
       });
-      await tx.rideEvents.create({
+      await tx.ride_events.create({
         data: {
-          rideId: offer.ride_id,
-          eventType: 'DRIVER_ASSIGNED',
-          fromStatus: 'SEARCHING',
-          toStatus: 'ASSIGNED',
-          actorRole: 'SYSTEM',
-          actorUserId: params.driverId,
+          ride_id: offer.ride_id,
+          event_type: 'DRIVER_ASSIGNED',
+          from_status: 'SEARCHING',
+          to_status: 'ASSIGNED',
+          actor_role: 'SYSTEM',
+          actor_user_id: params.driver_id,
           payload: {},
         },
       });
@@ -197,12 +197,12 @@ export class DispatchService {
 
   async sweep() {
     const now = new Date();
-    await this.prisma.rideOffers.updateMany({
-      where: { status: 'PENDING', expiresAt: { lt: now } },
-      data: { status: 'EXPIRED', respondedAt: now },
+    await this.prisma.ride_offers.updateMany({
+      where: { status: 'PENDING', expires_at: { lt: now } },
+      data: { status: 'EXPIRED', responded_at: now },
     });
     await this.prisma.rides.updateMany({
-      where: { status: 'SEARCHING', searchExpiresAt: { lt: now } },
+      where: { status: 'SEARCHING', search_expires_at: { lt: now } },
       data: { status: 'NO_DRIVER_FOUND' },
     });
     return { ok: true };

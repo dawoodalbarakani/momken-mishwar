@@ -16,7 +16,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
     const request = ctx.getRequest();
-    const requestId =
+    const request_id =
       (request.headers['x-request-id'] as string) ?? request.id ?? crypto.randomUUID();
 
     let code: string = ErrorCode.INTERNAL;
@@ -44,7 +44,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     this.logger.error(
-      `[${requestId}] ${messageEn} (${code})`,
+      `[${request_id}] ${messageEn} (${code})`,
       exception instanceof Error ? exception.stack : undefined,
     );
 
@@ -53,7 +53,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         code,
         message_ar: messageAr,
         message_en: messageEn,
-        request_id: requestId,
+        request_id: request_id,
       },
     });
   }

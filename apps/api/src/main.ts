@@ -15,10 +15,23 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, new ExpressAdapter(), {
     bufferLogs: true,
     logger: new AppLogger(),
-    cors: {
-      origin: (process.env.CORS_ORIGIN ?? 'http://127.0.0.1:3000').split(',').map((o) => o.trim()),
-      credentials: true,
+  cors: {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      const allowed = (process.env.CORS_ORIGIN ?? 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:19006')
+        .split(',')
+        .map((o) => o.trim());
+      if (allowed.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
     },
+    credentials: true,
+  },
   });
 
   app.useGlobalPipes(

@@ -1,9 +1,11 @@
 import { getServerToken } from "@/lib/auth-server";
 import { apiRequest } from "@/lib/api";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
+import { Separator } from "@/components/ui/separator";
 import { Search } from "lucide-react";
 
 type Ticket = { id: string; customer_name: string; category: string; status: string; created_at: string };
@@ -43,90 +45,116 @@ export default async function SupportPage({
   return (
     <div className="container-admin py-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 p-4">
-          <div className="flex flex-col md:flex-row gap-3 items-end mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 text-sm font-medium mb-1">
-                <Search className="w-4 h-4" /> البحث في الشكاوى والملاحظات الداخلية
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex flex-col md:flex-row gap-3 items-end">
+              <div className="flex-1">
+                <InputGroup>
+                  <InputGroupAddon>
+                    <Search className="size-4" />
+                  </InputGroupAddon>
+                  <InputGroupInput defaultValue={searchParams.q || ""} placeholder="العميل، الفئة، ملاحظة" />
+                </InputGroup>
               </div>
-              <Input defaultValue={searchParams.q || ""} placeholder="العميل، الفئة، ملاحظة" />
+              <CardDescription className="text-xs hidden md:block">
+                استدعي API حقيقي: `GET /v1/support/tickets`، `GET/POST /v1/support/ticket-notes`، `GET /v1/admin/audit`.
+              </CardDescription>
             </div>
-            <p className="text-xs text-gray-500 hidden md:block">
-              استدعي API حقيقي: `GET /v1/support/tickets`، `GET/POST /v1/support/ticket-notes`، `GET /v1/admin/audit`.
-            </p>
-          </div>
-          <div className="overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>الشكوى</TableHead>
-                  <TableHead>العميل</TableHead>
-                  <TableHead>الفئة</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>التاريخ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTickets.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-mono text-xs">{t.id}</TableCell>
-                    <TableCell>{t.customer_name}</TableCell>
-                    <TableCell>{t.category}</TableCell>
-                    <TableCell><Badge variant="outline">{t.status}</Badge></TableCell>
-                    <TableCell className="font-mono text-xs">{new Date(t.created_at).toLocaleString("ar-SA")}</TableCell>
-                  </TableRow>
-                ))}
-                {filteredTickets.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-gray-500 py-4">
-                      لا توجد شكاوى
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          </CardHeader>
+          <CardContent>
+            {filteredTickets.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>لا توجد شكاوى</EmptyTitle>
+                  <EmptyDescription>لم يتم العثور على شكاوى.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>الشكوى</TableHead>
+                      <TableHead>العميل</TableHead>
+                      <TableHead>الفئة</TableHead>
+                      <TableHead>الحالة</TableHead>
+                      <TableHead>التاريخ</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTickets.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="font-mono text-xs">{t.id}</TableCell>
+                        <TableCell>{t.customer_name}</TableCell>
+                        <TableCell>{t.category}</TableCell>
+                        <TableCell><Badge variant="outline">{t.status}</Badge></TableCell>
+                        <TableCell className="font-mono text-xs">{new Date(t.created_at).toLocaleString("ar-SA")}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
         </Card>
 
         <div className="flex flex-col gap-4">
-          <Card className="p-4">
-            <h3 className="font-bold mb-2">ملاحظات داخلية</h3>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {notes.map((n) => (
-                <div key={n.id} className="p-3 border rounded text-sm">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>{n.author}</span>
-                    <span className="text-gray-400">{new Date(n.created_at).toLocaleString("ar-SA")}</span>
-                  </div>
-                  <div>{n.body}</div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">ملاحظات داخلية</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {notes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">لا توجد ملاحظات داخلية</p>
+              ) : (
+                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
+                  {notes.map((n) => (
+                    <Card key={n.id} className="p-3">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-medium">{n.author}</span>
+                        <span className="text-muted-foreground">{new Date(n.created_at).toLocaleString("ar-SA")}</span>
+                      </div>
+                      <div className="text-sm">{n.body}</div>
+                    </Card>
+                  ))}
                 </div>
-              ))}
-              {notes.length === 0 && <div className="text-sm text-gray-500">لا توجد ملاحظات داخلية</div>}
-            </div>
+              )}
+            </CardContent>
           </Card>
-          <Card className="p-4">
-            <h3 className="font-bold mb-2">سجل التغييرات الحساس</h3>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {audit.map((a) => (
-                <div key={a.id} className="p-3 border rounded text-sm">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>{a.actor}</span>
-                    <span className="text-gray-400">{new Date(a.at).toLocaleString("ar-SA")}</span>
-                  </div>
-                  <div>{a.action} — {a.entity} ({a.entity_id})</div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">سجل التغييرات الحساس</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {audit.length === 0 ? (
+                <p className="text-sm text-muted-foreground">لا توجد سجلات تدقيق</p>
+              ) : (
+                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
+                  {audit.map((a) => (
+                    <Card key={a.id} className="p-3">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-medium">{a.actor}</span>
+                        <span className="text-muted-foreground">{new Date(a.at).toLocaleString("ar-SA")}</span>
+                      </div>
+                      <div className="text-sm">{a.action} — {a.entity} ({a.entity_id})</div>
+                    </Card>
+                  ))}
                 </div>
-              ))}
-              {audit.length === 0 && <div className="text-sm text-gray-500">لا توجد سجلات تدقيق</div>}
-            </div>
+              )}
+            </CardContent>
           </Card>
         </div>
       </div>
 
-      <Card className="mt-6 p-4">
-        <h3 className="font-bold mb-2">سجل العمليات المالية الحساسة</h3>
-        <p className="text-sm text-gray-600">
-          يُسجل كل عملية مالية حساسة (اعتماد صرف، تسوية) مع هوية الموظف والطابع الزمني. لا تُحذف السجلات المالية أو الرحلات المكتملة دون سياسة صريحة.
-        </p>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">سجل العمليات المالية الحساسة</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            يُسجل كل عملية مالية حساسة (اعتماد صرف، تسوية) مع هوية الموظف والطابع الزمني. لا تُحذف السجلات المالية أو الرحلات المكتملة دون سياسة صريحة.
+          </p>
+        </CardContent>
       </Card>
     </div>
   );

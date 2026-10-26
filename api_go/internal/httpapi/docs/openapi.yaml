@@ -1,0 +1,1584 @@
+openapi: 3.0.3
+info:
+  title: Mishwar Yemen API (Go)
+  description: |
+    Ride-hailing API for Mishwar Yemen. Server-computed fares, OTP-based
+    authentication, dispatch, trip lifecycle, driver earnings, and admin operations.
+  version: v1
+  contact:
+    name: Mishwar Engineering
+    url: https://github.com/barakanid96/momken-mishwar
+  license:
+    name: Proprietary
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+  - url: https://api.mishwar.example.com/v1
+    description: Production
+tags:
+  - name: auth
+    description: OTP login, token refresh, logout, session
+  - name: rides
+    description: Ride requests, fare quotes, cancellation
+  - name: dispatch
+    description: Driver search, offer acceptance
+  - name: trips
+    description: Trip lifecycle (en-route, arrived, start, complete)
+  - name: drivers
+    description: Driver profile, availability, vehicles
+  - name: customers
+    description: Customer profile, saved places
+  - name: payments
+    description: Cash payments, payouts, driver wallet/ledger
+  - name: locations
+    description: Driver location updates
+  - name: admin
+    description: Administrative operations
+  - name: health
+    description: Liveness and readiness probes
+paths:
+  /auth/otp/request:
+    post:
+      tags: [auth]
+      summary: Request an OTP code
+      operationId: authOtpRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequest'
+      responses:
+        '200':
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpRequestResult'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/otp/verify:
+    post:
+      tags: [auth]
+      summary: Verify OTP and issue access + refresh tokens
+      operationId: authOtpVerify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerify'
+      responses:
+        '200':
+          description: Token pair issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate refresh token and issue a new pair
+      operationId: authRefresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Revoke all refresh tokens for the current user
+      operationId: authLogout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Get authenticated user profile
+      operationId: authMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /quotes:
+    post:
+      tags: [rides]
+      summary: Server-computed price quote
+      operationId: createQuote
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequest'
+      responses:
+        '200':
+          description: Fare breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /rides:
+    post:
+      tags: [rides]
+      summary: Create a ride request (idempotent)
+      operationId: createRide
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RideCreate'
+      responses:
+        '201':
+          description: Ride created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideResult'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/IdempotencyConflict'
+    get:
+      tags: [rides]
+      summary: List rides (with optional status filter and cursor pagination)
+      operationId: listRides
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: List of rides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideList'
+  /rides/active:
+    get:
+      tags: [rides]
+      summary: Get the customer's active ride
+      operationId: getActiveRide
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active ride
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /rides/{rideId}:
+    get:
+      tags: [rides]
+      summary: Get a ride by ID
+      operationId: getRide
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      responses:
+        '200':
+          description: Ride detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [rides]
+      summary: Cancel a ride
+      operationId: cancelRide
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RideCancel'
+      responses:
+        '200':
+          description: Ride cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideResult'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /rides/{rideId}/start-code:
+    get:
+      tags: [trips]
+      summary: Get the start code for a ride (customer only)
+      operationId: getStartCode
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      responses:
+        '200':
+          description: Start code and expiry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartCodeResult'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /dispatch/rides/{rideId}/search:
+    post:
+      tags: [dispatch]
+      summary: Start driver search and create offers (SYSTEM)
+      operationId: dispatchSearch
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      responses:
+        '200':
+          description: Offers created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /dispatch/offers/{offerId}/accept:
+    post:
+      tags: [dispatch]
+      summary: Accept a ride offer (atomic assignment)
+      operationId: acceptOffer
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OfferId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfferAccept'
+      responses:
+        '200':
+          description: Ride assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptOfferResult'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /dispatch/sweep:
+    post:
+      tags: [dispatch]
+      summary: Expire offers and timed-out searches (cron/job)
+      operationId: dispatchSweep
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sweep complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResult'
+  /rides/{rideId}/en-route:
+    post:
+      tags: [trips]
+      summary: Driver en route to pickup
+      operationId: tripEnRoute
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideResult'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /rides/{rideId}/arrived:
+    post:
+      tags: [trips]
+      summary: Driver arrived at pickup
+      operationId: tripArrived
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideResult'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /rides/{rideId}/start:
+    post:
+      tags: [trips]
+      summary: Start trip (requires verified start code)
+      operationId: tripStart
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TripStart'
+      responses:
+        '200':
+          description: Trip started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /rides/{rideId}/complete:
+    post:
+      tags: [trips]
+      summary: Complete trip and settle cash ledger
+      operationId: tripComplete
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      responses:
+        '200':
+          description: Trip completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideResult'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /drivers/me/profile:
+    get:
+      tags: [drivers]
+      summary: Get driver profile
+      operationId: getDriverProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Driver profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /drivers/me/availability:
+    post:
+      tags: [drivers]
+      summary: Set online/offline availability
+      operationId: setDriverAvailability
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverAvailability'
+      responses:
+        '200':
+          description: Availability updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverProfile'
+  /drivers:
+    get:
+      tags: [drivers]
+      summary: List drivers (admin/staff)
+      operationId: listDrivers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ServiceAreaId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: List of drivers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverList'
+  /vehicles:
+    post:
+      tags: [drivers]
+      summary: Register a vehicle
+      operationId: createVehicle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleCreate'
+      responses:
+        '201':
+          description: Vehicle registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResult'
+  /vehicles/me:
+    get:
+      tags: [drivers]
+      summary: List my vehicles
+      operationId: listMyVehicles
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of vehicles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleList'
+  /customers/me/profile:
+    get:
+      tags: [customers]
+      summary: Get or create customer profile
+      operationId: getCustomerProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Customer profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerProfile'
+  /customers/me/saved-places:
+    get:
+      tags: [customers]
+      summary: List saved places
+      operationId: listSavedPlaces
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Saved places
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedPlaceList'
+    post:
+      tags: [customers]
+      summary: Add a saved place
+      operationId: addSavedPlace
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedPlaceCreate'
+      responses:
+        '201':
+          description: Saved place created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedPlaceResult'
+  /payments/rides/{rideId}:
+    post:
+      tags: [payments]
+      summary: Record a cash payment for a ride
+      operationId: createPayment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreate'
+      responses:
+        '201':
+          description: Payment recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResult'
+  /payments:
+    get:
+      tags: [payments]
+      summary: List payment records (finance/admin)
+      operationId: listPayments
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaymentStatus'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentList'
+  /driver/payout-requests:
+    post:
+      tags: [payments]
+      summary: Request a driver payout (four-eyes approval)
+      operationId: requestPayout
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayoutRequest'
+      responses:
+        '201':
+          description: Payout requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutResult'
+  /driver/earnings:
+    get:
+      tags: [payments]
+      summary: Get driver wallet balance
+      operationId: getDriverEarnings
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Currency'
+      responses:
+        '200':
+          description: Driver balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverBalance'
+  /driver/ledger:
+    get:
+      tags: [payments]
+      summary: Get driver ledger entries
+      operationId: getDriverLedger
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Ledger entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerList'
+  /driver/location:
+    post:
+      tags: [locations]
+      summary: Push driver location batch
+      operationId: updateDriverLocation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationBatch'
+      responses:
+        '200':
+          description: Locations stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResult'
+  /driver/location/latest:
+    get:
+      tags: [locations]
+      summary: Get driver's last known location with age
+      operationId: getLatestDriverLocation
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Latest location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverLocation'
+  /admin/drivers:
+    get:
+      tags: [admin]
+      summary: List drivers (admin)
+      operationId: adminListDrivers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/VerificationStatus'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: List of drivers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminDriverList'
+  /admin/rides:
+    get:
+      tags: [admin]
+      summary: List rides (admin)
+      operationId: adminListRides
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: List of rides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminRideList'
+  /admin/rides/{rideId}/cancel:
+    post:
+      tags: [admin]
+      summary: Staff cancels a ride
+      operationId: adminCancelRide
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RideId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminRideCancel'
+      responses:
+        '200':
+          description: Ride cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideResult'
+  /admin/pricing-rules:
+    get:
+      tags: [admin]
+      summary: List pricing rules
+      operationId: adminListPricingRules
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ServiceAreaId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Pricing rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingRuleList'
+  /admin/payouts:
+    get:
+      tags: [admin]
+      summary: List driver payouts
+      operationId: adminListPayouts
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PayoutStatus'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: List of payouts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutList'
+  /admin/payouts/{payoutId}/approve:
+    post:
+      tags: [admin]
+      summary: Approve a payout (four-eyes)
+      operationId: approvePayout
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+      responses:
+        '200':
+          description: Payout approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutResult'
+  /admin/driver-balances:
+    get:
+      tags: [admin]
+      summary: All driver balances (ledger view)
+      operationId: adminDriverBalances
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Driver balances
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverBalanceList'
+  /admin/dashboard/stats:
+    get:
+      tags: [admin]
+      summary: Admin dashboard statistics
+      operationId: adminStats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminStats'
+  /health/live:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      operationId: healthLive
+      responses:
+        '200':
+          description: Service is live
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResult'
+  /health/ready:
+    get:
+      tags: [health]
+      summary: Readiness probe (database)
+      operationId: healthReady
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResult'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    RideId:
+      name: rideId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Ride UUID
+    OfferId:
+      name: offerId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Offer UUID
+    PayoutId:
+      name: payoutId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Payout UUID
+    StatusFilter:
+      name: status
+      in: query
+      schema:
+        type: string
+      description: Filter by status
+    VerificationStatus:
+      name: status
+      in: query
+      schema:
+        type: string
+      description: Filter by verification status
+    PaymentStatus:
+      name: status
+      in: query
+      schema:
+        type: string
+      description: Filter by payment status
+    PayoutStatus:
+      name: status
+      in: query
+      schema:
+        type: string
+      description: Filter by payout status
+    ServiceAreaId:
+      name: serviceAreaId
+      in: query
+      schema:
+        type: string
+        format: uuid
+      description: Filter by service area
+    Currency:
+      name: currency
+      in: query
+      schema:
+        type: string
+        default: YER
+      description: Currency code
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      description: Page size
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+      description: Pagination cursor
+  schemas:
+    OtpRequest:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          pattern: '^\+[0-9]{7,15}$'
+          example: +967771234567
+        purpose:
+          type: string
+          enum: [LOGIN, VERIFY_PHONE]
+          default: LOGIN
+    OtpRequestResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        expiresAt:
+          type: string
+          format: date-time
+    OtpVerify:
+      type: object
+      required: [phone, code]
+      properties:
+        phone:
+          type: string
+          example: +967771234567
+        code:
+          type: string
+          minLength: 4
+          maxLength: 8
+          example: 123456
+        purpose:
+          type: string
+          enum: [LOGIN, VERIFY_PHONE]
+          default: LOGIN
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    TokenPair:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+    OkResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        phoneE164:
+          type: string
+        locale:
+          type: string
+        status:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+    QuoteRequest:
+      type: object
+      required: [pickupLat, pickupLon, destLat, destLon, serviceAreaId, vehicleTypeId]
+      properties:
+        pickupLat:
+          type: number
+          format: double
+        pickupLon:
+          type: number
+          format: double
+        destLat:
+          type: number
+          format: double
+        destLon:
+          type: number
+          format: double
+        serviceAreaId:
+          type: string
+          format: uuid
+        vehicleTypeId:
+          type: string
+          format: uuid
+    QuoteResult:
+      type: object
+      properties:
+        currency:
+          type: string
+        mode:
+          type: string
+        ruleId:
+          type: string
+        ruleVersion:
+          type: integer
+        distanceMeters:
+          type: integer
+        durationSeconds:
+          type: integer
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceLine'
+        discountMinor:
+          type: integer
+        totalMinor:
+          type: integer
+        commissionBps:
+          type: integer
+        commissionMinor:
+          type: integer
+        driverNetMinor:
+          type: integer
+        estimated:
+          type: boolean
+    PriceLine:
+      type: object
+      properties:
+        code:
+          type: string
+        amountMinor:
+          type: integer
+    RideCreate:
+      type: object
+      required: [serviceAreaId, vehicleTypeId, pickupLat, pickupLon, destLat, destLon, idempotencyKey]
+      properties:
+        serviceAreaId:
+          type: string
+          format: uuid
+        vehicleTypeId:
+          type: string
+          format: uuid
+        pickupLat:
+          type: number
+          format: double
+        pickupLon:
+          type: number
+          format: double
+        destLat:
+          type: number
+          format: double
+        destLon:
+          type: number
+          format: double
+        idempotencyKey:
+          type: string
+          minLength: 8
+          maxLength: 128
+    RideResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        rideNumber:
+          type: integer
+        status:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        driverId:
+          type: string
+          format: uuid
+        quotedTotalMinor:
+          type: integer
+        currencyCode:
+          type: string
+        pricingRuleId:
+          type: string
+        pricingRuleVersion:
+          type: integer
+        estimatedDistanceM:
+          type: integer
+        estimatedDurationS:
+          type: integer
+        requestedAt:
+          type: string
+          format: date-time
+        assignedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+    RideList:
+      type: object
+      properties:
+        rides:
+          type: array
+          items:
+            $ref: '#/components/schemas/RideResult'
+        nextCursor:
+          type: string
+    RideCancel:
+      type: object
+      required: [reasonCode]
+      properties:
+        reasonCode:
+          type: string
+        note:
+          type: string
+    StartCodeResult:
+      type: object
+      properties:
+        code:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    SearchResult:
+      type: object
+      properties:
+        rideId:
+          type: string
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/RideOffer'
+        expiresAt:
+          type: string
+          format: date-time
+        replayed:
+          type: boolean
+    RideOffer:
+      type: object
+      properties:
+        id:
+          type: string
+        driverId:
+          type: string
+        status:
+          type: string
+        roundNo:
+          type: integer
+        distanceToPickupM:
+          type: integer
+        expiresAt:
+          type: string
+          format: date-time
+    OfferAccept:
+      type: object
+      required: [vehicleId]
+      properties:
+        vehicleId:
+          type: string
+    AcceptOfferResult:
+      type: object
+      properties:
+        rideId:
+          type: string
+        offerId:
+          type: string
+        status:
+          type: string
+    TripStart:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 4
+          maxLength: 8
+    DriverProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        serviceAreaId:
+          type: string
+          format: uuid
+        verificationStatus:
+          type: string
+        isOnline:
+          type: boolean
+        ratingAvg:
+          type: number
+          format: double
+        ratingCount:
+          type: integer
+    DriverAvailability:
+      type: object
+      required: [isOnline]
+      properties:
+        isOnline:
+          type: boolean
+    DriverList:
+      type: object
+      properties:
+        drivers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverProfile'
+        nextCursor:
+          type: string
+    VehicleCreate:
+      type: object
+      required: [vehicleTypeId, plateNumber]
+      properties:
+        vehicleTypeId:
+          type: string
+          format: uuid
+        plateNumber:
+          type: string
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: integer
+        color:
+          type: string
+    VehicleResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        driverId:
+          type: string
+        vehicleTypeId:
+          type: string
+        plateNumber:
+          type: string
+        isActive:
+          type: boolean
+    VehicleList:
+      type: object
+      properties:
+        vehicles:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehicleResult'
+    CustomerProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+    SavedPlaceCreate:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+        addressText:
+          type: string
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+    SavedPlaceResult:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        addressText:
+          type: string
+    SavedPlaceList:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            $ref: '#/components/schemas/SavedPlaceResult'
+    PaymentCreate:
+      type: object
+      required: [amount, currencyCode, method, idempotencyKey]
+      properties:
+        amount:
+          type: number
+        currencyCode:
+          type: string
+        method:
+          type: string
+          enum: [CASH]
+        idempotencyKey:
+          type: string
+    PaymentResult:
+      type: object
+      properties:
+        id:
+          type: string
+        rideId:
+          type: string
+        status:
+          type: string
+        amountMinor:
+          type: integer
+        currencyCode:
+          type: string
+    PaymentList:
+      type: object
+      properties:
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentResult'
+        nextCursor:
+          type: string
+    PayoutRequest:
+      type: object
+      required: [amount, currencyCode, requestedBy]
+      properties:
+        amount:
+          type: number
+        currencyCode:
+          type: string
+        method:
+          type: string
+        reference:
+          type: string
+        note:
+          type: string
+        requestedBy:
+          type: string
+    PayoutResult:
+      type: object
+      properties:
+        id:
+          type: string
+        driverId:
+          type: string
+        amountMinor:
+          type: integer
+        currencyCode:
+          type: string
+        status:
+          type: string
+    DriverBalance:
+      type: object
+      properties:
+        driverId:
+          type: string
+        currency:
+          type: string
+        balanceMinor:
+          type: integer
+    LedgerList:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerEntry'
+        nextCursor:
+          type: string
+    LedgerEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        entryType:
+          type: string
+        amountMinor:
+          type: integer
+        currencyCode:
+          type: string
+        idempotencyKey:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    LocationBatch:
+      type: object
+      required: [updates]
+      properties:
+        updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationUpdate'
+    LocationUpdate:
+      type: object
+      required: [lat, lon, recordedAt]
+      properties:
+        rideId:
+          type: string
+          format: uuid
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        accuracyM:
+          type: number
+          format: double
+        speedMps:
+          type: number
+          format: double
+        headingDeg:
+          type: number
+          format: double
+        recordedAt:
+          type: string
+          format: date-time
+    DriverLocation:
+      type: object
+      properties:
+        locationLat:
+          type: number
+          format: double
+        locationLon:
+          type: number
+          format: double
+        updatedAt:
+          type: string
+          format: date-time
+        ageSec:
+          type: integer
+    AdminDriverList:
+      type: object
+      properties:
+        drivers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverProfile'
+    AdminRideList:
+      type: object
+      properties:
+        rides:
+          type: array
+          items:
+            $ref: '#/components/schemas/RideResult'
+    AdminRideCancel:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+    PricingRuleList:
+      type: object
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingRule'
+    PricingRule:
+      type: object
+      properties:
+        id:
+          type: string
+        version:
+          type: integer
+        mode:
+          type: string
+        currencyCode:
+          type: string
+        baseFare:
+          type: number
+        perKm:
+          type: number
+        perMinute:
+          type: number
+        minimumFare:
+          type: number
+        commissionBps:
+          type: integer
+        status:
+          type: string
+    PayoutList:
+      type: object
+      properties:
+        payouts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PayoutResult'
+    DriverBalanceList:
+      type: object
+      properties:
+        balances:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverBalance'
+    AdminStats:
+      type: object
+      properties:
+        tripsByStatus:
+          type: object
+          additionalProperties:
+            type: integer
+        totalRides:
+          type: integer
+        onlineDrivers:
+          type: integer
+        totalPaidOutMinor:
+          type: number
+    HealthResult:
+      type: object
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResult'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResult'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResult'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResult'
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResult'
+    TooManyRequests:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResult'
+    IdempotencyConflict:
+      description: Idempotency key conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResult'
+    ErrorResult:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            messageAr:
+              type: string
+            messageEn:
+              type: string
+            requestId:
+              type: string

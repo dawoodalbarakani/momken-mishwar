@@ -22,14 +22,14 @@ export class SupportController {
   @Post()
   @ApiOperation({ summary: 'Create a support ticket' })
   create(@Body() body: any, @CurrentUser() user: any) {
-    return this.service.createTicket({ ...body, reporterId: user.sub });
+    return this.service.createTicket({ ...body, reporter_id: user.sub });
   }
 
-  @Post(':ticketId/notes')
+  @Post(':ticket_id/notes')
   @ApiOperation({ summary: 'Add a note to a ticket' })
   @Roles('SUPPORT_AGENT', 'OPERATIONS_MANAGER', 'ADMIN', 'SUPER_ADMIN')
   addNote(@Body() body: any, @CurrentUser() user: any) {
-    return this.service.addNote({ ...body, authorId: user.sub });
+    return this.service.addNote({ ...body, author_id: user.sub });
   }
 
   @Get()

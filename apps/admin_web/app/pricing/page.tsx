@@ -1,9 +1,10 @@
 import { getServerToken } from "@/lib/auth-server";
 import { apiRequest } from "@/lib/api";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import { PublishPricingButton } from "./publish-pricing-button";
 import { Search } from "lucide-react";
 
@@ -44,63 +45,71 @@ export default async function PricingPage({
 
   return (
     <div className="container-admin py-6">
-      <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-3 items-end mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 text-sm font-medium mb-1">
-              <Search className="w-4 h-4" /> البحث عن قاعدة تسعير
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row gap-3 items-end">
+            <div className="flex-1">
+              <InputGroup>
+                <InputGroupAddon>
+                  <Search className="size-4" />
+                </InputGroupAddon>
+                <InputGroupInput defaultValue={searchParams.q || ""} placeholder="المنطقة أو نوع المركبة" />
+              </InputGroup>
             </div>
-            <Input defaultValue={searchParams.q || ""} placeholder="المنطقة أو نوع المركبة" />
+            <CardDescription className="text-xs hidden md:block">
+              استدعي API حقيقي: `GET/POST /v1/admin/pricing-rules`، `POST /v1/admin/pricing-rules/:id/publish`.
+            </CardDescription>
           </div>
-          <p className="text-xs text-gray-500 hidden md:block">
-            استدعي API حقيقي: `GET/POST /v1/admin/pricing-rules`، `POST /v1/admin/pricing-rules/:id/publish`.
-          </p>
-        </div>
-        <div className="overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>المنطقة</TableHead>
-                <TableHead>نوع المركبة</TableHead>
-                <TableHead>البداية</TableHead>
-                <TableHead>لكل كم</TableHead>
-                <TableHead>لكل دقيقة</TableHead>
-                <TableHead>العمولة %</TableHead>
-                <TableHead>الإصدار</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead>الإجراء</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>{r.region}</TableCell>
-                  <TableCell>{r.vehicle_type}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.base_fare}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.per_km}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.per_minute}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.commission_percent}</TableCell>
-                  <TableCell className="font-mono text-xs">v{r.version}</TableCell>
-                  <TableCell>
-                    <Badge variant={r.is_published ? "default" : "secondary"}>
-                      {r.is_published ? "منشور" : "مسودة"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {!r.is_published && <PublishPricingButton ruleId={r.id} token={token} />}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {rules.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center text-gray-500 py-4">
-                    لا توجد قواعد تسعير
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        </CardHeader>
+        <CardContent>
+          {filtered.length === 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>لا توجد قواعد تسعير</EmptyTitle>
+                <EmptyDescription>لم يتم العثور على قواعد تسعير.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <div className="overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>المنطقة</TableHead>
+                    <TableHead>نوع المركبة</TableHead>
+                    <TableHead>البداية</TableHead>
+                    <TableHead>لكل كم</TableHead>
+                    <TableHead>لكل دقيقة</TableHead>
+                    <TableHead>العمولة %</TableHead>
+                    <TableHead>الإصدار</TableHead>
+                    <TableHead>الحالة</TableHead>
+                    <TableHead>الإجراء</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.region}</TableCell>
+                      <TableCell>{r.vehicle_type}</TableCell>
+                      <TableCell className="font-mono text-xs">{r.base_fare}</TableCell>
+                      <TableCell className="font-mono text-xs">{r.per_km}</TableCell>
+                      <TableCell className="font-mono text-xs">{r.per_minute}</TableCell>
+                      <TableCell className="font-mono text-xs">{r.commission_percent}</TableCell>
+                      <TableCell className="font-mono text-xs">v{r.version}</TableCell>
+                      <TableCell>
+                        <Badge variant={r.is_published ? "default" : "secondary"}>
+                          {r.is_published ? "منشور" : "مسودة"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {!r.is_published && <PublishPricingButton ruleId={r.id} token={token} />}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
       </Card>
     </div>
   );

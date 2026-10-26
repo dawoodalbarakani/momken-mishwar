@@ -30,8 +30,8 @@ export class DriversController {
   @Post('me/availability')
   @ApiOperation({ summary: 'Set online/offline availability' })
   @Roles('DRIVER')
-  availability(@Body() body: { isOnline: boolean }, @CurrentUser() user: any) {
-    return this.service.setOnline(user.sub, body.isOnline);
+  availability(@Body() body: { is_online: boolean }, @CurrentUser() user: any) {
+    return this.service.setOnline(user.sub, body.is_online);
   }
 
   @Get()

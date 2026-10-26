@@ -40,10 +40,10 @@ async function op(sql: string, params: unknown[] = []): Promise<OpResult> {
 }
 
 interface Ids {
-  serviceAreaId: string;
-  vehicleTypeId: string;
-  pricingRuleId: string;
-  pricingRuleVersion: number;
+  service_area_id: string;
+  vehicle_type_id: string;
+  pricing_rule_id: string;
+  pricing_rule_version: number;
   customer1UserId: string;
   customer2UserId: string;
   driver1UserId: string;
@@ -64,12 +64,12 @@ async function ensureReferenceData(): Promise<Ids> {
         [SANAA_ID]
       )).rows[0];
     }
-    const serviceAreaId = sa.id;
+    const service_area_id = sa.id;
 
     await c.query(
       `INSERT INTO dispatch_settings (service_area_id, search_radius_m, max_candidates, offer_batch_size, offer_ttl_seconds, search_timeout_seconds, location_max_age_seconds, start_code_ttl_minutes, start_code_max_attempts)
        VALUES ($1, 3000, 5, 1, 20, 120, 30, 120, 5) ON CONFLICT (service_area_id) DO NOTHING`,
-      [serviceAreaId]
+      [service_area_id]
     );
 
     let vt = (await c.query(`SELECT id FROM vehicle_types WHERE code = $1`, ['STANDARD'])).rows[0];
@@ -79,7 +79,7 @@ async function ensureReferenceData(): Promise<Ids> {
         [STANDARD_ID]
       )).rows[0];
     }
-    const vehicleTypeId = vt.id;
+    const vehicle_type_id = vt.id;
 
     const ensureUser = async (phone: string) => {
       const r = await c.query(`INSERT INTO users (phone_e164, status) VALUES ($1, 'ACTIVE') ON CONFLICT (phone_e164) DO UPDATE SET status = 'ACTIVE', deleted_at = NULL RETURNING id`, [phone]);
@@ -105,19 +105,19 @@ async function ensureReferenceData(): Promise<Ids> {
 
     let pr = (await c.query(
       `SELECT id, version FROM pricing_rules WHERE service_area_id = $1 AND vehicle_type_id = $2 AND status = 'ACTIVE'`,
-      [serviceAreaId, vehicleTypeId]
+      [service_area_id, vehicle_type_id]
     )).rows[0];
     if (!pr) {
       pr = (await c.query(
         `INSERT INTO pricing_rules (service_area_id, vehicle_type_id, version, mode, currency_code, base_fare, per_km, per_minute, minimum_fare, commission_bps, status, effective_from, published_by, created_by)
          VALUES ($1, $2, 1, 'DISTANCE_TIME', 'YER', 1000, 200, 20, 1500, 1500, 'ACTIVE', now(), $3, $3) RETURNING id, version`,
-        [serviceAreaId, vehicleTypeId, customer1UserId]
+        [service_area_id, vehicle_type_id, customer1UserId]
       )).rows[0];
     }
-    const pricingRuleId = pr.id;
-    const pricingRuleVersion = pr.version;
+    const pricing_rule_id = pr.id;
+    const pricing_rule_version = pr.version;
 
-    const ensureDriver = async (userId: string) => {
+    const ensureDriver = async (user_id: string) => {
       await c.query(
         `INSERT INTO driver_profiles (user_id, full_name, service_area_id, verification_status, verification_reviewed_by, verification_reviewed_at, is_online, last_location, last_location_at)
          VALUES ($1, $2, $3, 'APPROVED', $1, now(), true, ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography, now())
@@ -130,18 +130,18 @@ async function ensureReferenceData(): Promise<Ids> {
            is_online = true,
            last_location = EXCLUDED.last_location,
            last_location_at = now()`,
-        [userId, `سائق ${userId.slice(-4)}`, serviceAreaId, 44.20, 15.35]
+        [user_id, `سائق ${user_id.slice(-4)}`, service_area_id, 44.20, 15.35]
       );
     };
     await ensureDriver(driver1UserId);
     await ensureDriver(driver2UserId);
 
-    const ensureVehicle = async (driverId: string, plate: string) => {
+    const ensureVehicle = async (driver_id: string, plate: string) => {
       const existing = (await c.query(`SELECT id FROM vehicles WHERE plate_number = $1 AND is_active = true LIMIT 1`, [plate])).rows[0];
       if (existing) return existing.id;
       const r = await c.query(
         `INSERT INTO vehicles (driver_id, vehicle_type_id, plate_number, is_active) VALUES ($1, $2, $3, true) RETURNING id`,
-        [driverId, vehicleTypeId, plate]
+        [driver_id, vehicle_type_id, plate]
       );
       return r.rows[0].id;
     };
@@ -149,10 +149,10 @@ async function ensureReferenceData(): Promise<Ids> {
     const vehicle2Id = await ensureVehicle(driver2UserId, 'SANAA-102');
 
     return {
-      serviceAreaId,
-      vehicleTypeId,
-      pricingRuleId,
-      pricingRuleVersion,
+      service_area_id,
+      vehicle_type_id,
+      pricing_rule_id,
+      pricing_rule_version,
       customer1UserId,
       customer2UserId,
       driver1UserId,
@@ -182,12 +182,12 @@ const cleanupRideSql = `
   WHERE id = ANY($1::uuid[]) AND status IN ('SEARCHING', 'ASSIGNED')
 `;
 
-async function createRide(c: PoolClient, customerUserId: string, serviceAreaId: string, vehicleTypeId: string, pricingRuleId: string, pricingRuleVersion: number): Promise<string> {
+async function createRide(c: PoolClient, customerUserId: string, service_area_id: string, vehicle_type_id: string, pricing_rule_id: string, pricing_rule_version: number): Promise<string> {
   const r = await c.query(insertRideSql, [
-    customerUserId, serviceAreaId, vehicleTypeId,
+    customerUserId, service_area_id, vehicle_type_id,
     44.20, 15.35, 44.25, 15.40,
     'موقع الاستلام', 'الوجهة',
-    pricingRuleId, pricingRuleVersion,
+    pricing_rule_id, pricing_rule_version,
     JSON.stringify({ base_fare: 1000, per_km: 200, per_minute: 20, distance_km: 5, duration_min: 10 }),
     2200, 5000, 600,
   ]);
@@ -206,8 +206,8 @@ async function runScenario(label: string, fn: (ids: Ids) => Promise<Scenario>, i
 
 async function scenario1(ids: Ids): Promise<Scenario> {
   const name = '1. سائقان يقبلان نفس العرض في وقت واحد (double accept نفس الرحلة)';
-  const rideId = await withTxn(async (c) => {
-    const id = await createRide(c, ids.customer1UserId, ids.serviceAreaId, ids.vehicleTypeId, ids.pricingRuleId, ids.pricingRuleVersion);
+  const ride_id = await withTxn(async (c) => {
+    const id = await createRide(c, ids.customer1UserId, ids.service_area_id, ids.vehicle_type_id, ids.pricing_rule_id, ids.pricing_rule_version);
     await c.query(`INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1, $2, 'PENDING', 1, now() + interval '5 minutes')`, [id, ids.driver1UserId]);
     await c.query(`INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1, $2, 'PENDING', 1, now() + interval '5 minutes')`, [id, ids.driver2UserId]);
     return id;
@@ -215,13 +215,13 @@ async function scenario1(ids: Ids): Promise<Scenario> {
 
   const acceptSql = `UPDATE rides SET status = 'ASSIGNED', driver_id = $1, vehicle_id = $2, assigned_at = now(), start_code_nonce = decode($4,'hex'), start_code_expires_at = now() + interval '10 minutes' WHERE id = $3 AND status = 'SEARCHING' AND driver_id IS NULL RETURNING *`;
   const [r1, r2] = await Promise.all([
-    op(acceptSql, [ids.driver1UserId, ids.vehicle1Id, rideId, 'deadbeef']),
-    op(acceptSql, [ids.driver2UserId, ids.vehicle2Id, rideId, 'deadbeef']),
+    op(acceptSql, [ids.driver1UserId, ids.vehicle1Id, ride_id, 'deadbeef']),
+    op(acceptSql, [ids.driver2UserId, ids.vehicle2Id, ride_id, 'deadbeef']),
   ]);
 
   const sum = r1.rowCount + r2.rowCount;
   const pass = sum === 1;
-  await withTxn(async (c) => { await c.query(cleanupRideSql, [[rideId]]); });
+  await withTxn(async (c) => { await c.query(cleanupRideSql, [[ride_id]]); });
   return {
     name, pass,
     detail: `السائق1 rowCount=${r1.rowCount} err=${r1.err}; السائق2 rowCount=${r2.rowCount} err=${r2.err}; المجموع=${sum} (المتوقع 1)`,
@@ -231,8 +231,8 @@ async function scenario1(ids: Ids): Promise<Scenario> {
 async function scenario2(ids: Ids): Promise<Scenario> {
   const name = '2. سائق يقبل عرضين لرحلتين متعارضتين (رحلة واحدة نشطة لكل سائق)';
   const { rideAId, rideBId } = await withTxn(async (c) => {
-    const rideAId = await createRide(c, ids.customer1UserId, ids.serviceAreaId, ids.vehicleTypeId, ids.pricingRuleId, ids.pricingRuleVersion);
-    const rideBId = await createRide(c, ids.customer2UserId, ids.serviceAreaId, ids.vehicleTypeId, ids.pricingRuleId, ids.pricingRuleVersion);
+    const rideAId = await createRide(c, ids.customer1UserId, ids.service_area_id, ids.vehicle_type_id, ids.pricing_rule_id, ids.pricing_rule_version);
+    const rideBId = await createRide(c, ids.customer2UserId, ids.service_area_id, ids.vehicle_type_id, ids.pricing_rule_id, ids.pricing_rule_version);
     await c.query(`INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1, $2, 'PENDING', 1, now() + interval '5 minutes')`, [rideAId, ids.driver1UserId]);
     await c.query(`INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1, $2, 'PENDING', 1, now() + interval '5 minutes')`, [rideBId, ids.driver1UserId]);
     return { rideAId, rideBId };
@@ -285,18 +285,18 @@ async function scenario4(ids: Ids): Promise<Scenario> {
 
 async function scenario5(ids: Ids): Promise<Scenario> {
   const name = '5. إعادة تنفيذ عملية مالية بمفتاح استidem-key مكرر (driver_ledger_entries)';
-  let rideId: string;
+  let ride_id: string;
   const ledgerKey = 'pay-1-' + Date.now();
-  rideId = await withTxn(async (c) => {
-    return createRide(c, ids.customer1UserId, ids.serviceAreaId, ids.vehicleTypeId, ids.pricingRuleId, ids.pricingRuleVersion);
+  ride_id = await withTxn(async (c) => {
+    return createRide(c, ids.customer1UserId, ids.service_area_id, ids.vehicle_type_id, ids.pricing_rule_id, ids.pricing_rule_version);
   });
   const [r1, r2] = await Promise.all([
-    op(`INSERT INTO driver_ledger_entries (driver_id, ride_id, entry_type, amount, currency_code, idempotency_key, memo) VALUES ($1, $2, 'EARNING', 5000.00, 'YER', $3, 'scenario-5-cleanup')`, [ids.driver1UserId, rideId, ledgerKey]),
-    op(`INSERT INTO driver_ledger_entries (driver_id, ride_id, entry_type, amount, currency_code, idempotency_key, memo) VALUES ($1, $2, 'EARNING', 5000.00, 'YER', $3, 'scenario-5-cleanup')`, [ids.driver1UserId, rideId, ledgerKey]),
+    op(`INSERT INTO driver_ledger_entries (driver_id, ride_id, entry_type, amount, currency_code, idempotency_key, memo) VALUES ($1, $2, 'EARNING', 5000.00, 'YER', $3, 'scenario-5-cleanup')`, [ids.driver1UserId, ride_id, ledgerKey]),
+    op(`INSERT INTO driver_ledger_entries (driver_id, ride_id, entry_type, amount, currency_code, idempotency_key, memo) VALUES ($1, $2, 'EARNING', 5000.00, 'YER', $3, 'scenario-5-cleanup')`, [ids.driver1UserId, ride_id, ledgerKey]),
   ]);
   const sum = r1.rowCount + r2.rowCount;
   const pass = sum === 1 && (r1.err === '23505' || r2.err === '23505');
-  await withTxn(async (c) => { await c.query(cleanupRideSql, [[rideId]]); });
+  await withTxn(async (c) => { await c.query(cleanupRideSql, [[ride_id]]); });
   return {
     name, pass,
     detail: `القيد1 rowCount=${r1.rowCount} err=${r1.err}; القيد2 rowCount=${r2.rowCount} err=${r2.err}; المجموع=${sum} (المتوقع 1 + انتهاك فريد 23505)`,
@@ -305,22 +305,22 @@ async function scenario5(ids: Ids): Promise<Scenario> {
 
 async function scenario6(ids: Ids): Promise<Scenario> {
   const name = '6. انتهاء صلاحية العرض أثناء محاولة القبول';
-  const { rideId, offerId } = await withTxn(async (c) => {
-    const id = await createRide(c, ids.customer1UserId, ids.serviceAreaId, ids.vehicleTypeId, ids.pricingRuleId, ids.pricingRuleVersion);
+  const { ride_id, offerId } = await withTxn(async (c) => {
+    const id = await createRide(c, ids.customer1UserId, ids.service_area_id, ids.vehicle_type_id, ids.pricing_rule_id, ids.pricing_rule_version);
     // offered_at في الماضي و expires_at في الماضي ولكن expires_at > offered_at (يتيحه الـ check constraint).
     const r = await c.query(
       `INSERT INTO ride_offers (ride_id, driver_id, status, round_no, offered_at, expires_at)
        VALUES ($1, $2, 'PENDING', 1, now() - interval '1 hour', now() - interval '1 minute') RETURNING id`,
       [id, ids.driver1UserId]
     );
-    return { rideId: id, offerId: r.rows[0].id };
+    return { ride_id: id, offerId: r.rows[0].id };
   });
 
   const res = await op(`UPDATE ride_offers SET status = 'ACCEPTED', responded_at = now() WHERE id = $1 AND status = 'PENDING' AND expires_at > now() RETURNING *`, [offerId]);
   const pass = res.rowCount === 0;
   await withTxn(async (c) => {
     await c.query(`DELETE FROM ride_offers WHERE id = $1`, [offerId]);
-    await c.query(cleanupRideSql, [[rideId]]);
+    await c.query(cleanupRideSql, [[ride_id]]);
   });
   return {
     name, pass,
@@ -333,15 +333,15 @@ async function scenario7(ids: Ids): Promise<Scenario> {
   const name = '7. معاملتان تنشئان رحلتين نشطتين للعميل نفسه';
   const [r1, r2] = await Promise.all([
     op(insertRideSql, [
-      ids.customer1UserId, ids.serviceAreaId, ids.vehicleTypeId,
+      ids.customer1UserId, ids.service_area_id, ids.vehicle_type_id,
       44.20, 15.35, 44.25, 15.40, 'موقع الاستلام A', 'الوجهة A',
-      ids.pricingRuleId, ids.pricingRuleVersion,
+      ids.pricing_rule_id, ids.pricing_rule_version,
       JSON.stringify({ base_fare: 1000 }), 2200, 5000, 600,
     ]),
     op(insertRideSql, [
-      ids.customer1UserId, ids.serviceAreaId, ids.vehicleTypeId,
+      ids.customer1UserId, ids.service_area_id, ids.vehicle_type_id,
       44.20, 15.35, 44.25, 15.40, 'موقع الاستلام B', 'الوجهة B',
-      ids.pricingRuleId, ids.pricingRuleVersion,
+      ids.pricing_rule_id, ids.pricing_rule_version,
       JSON.stringify({ base_fare: 1000 }), 2200, 5000, 600,
     ]),
   ]);
@@ -364,18 +364,18 @@ async function scenario7(ids: Ids): Promise<Scenario> {
 
 async function scenario8(ids: Ids): Promise<Scenario> {
   const name = '8. قبول عرضين للرحلة نفسها لا يمكن أن يتجاوز القيد الفريد';
-  const { rideId, offer1, offer2 } = await withTxn(async c => {
-    const rideId = await createRide(c, ids.customer1UserId, ids.serviceAreaId, ids.vehicleTypeId, ids.pricingRuleId, ids.pricingRuleVersion);
-    const a = await c.query("INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1,$2,'PENDING',1,now()+interval '5 minutes') RETURNING id", [rideId, ids.driver1UserId]);
-    const b = await c.query("INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1,$2,'PENDING',1,now()+interval '5 minutes') RETURNING id", [rideId, ids.driver2UserId]);
-    return { rideId, offer1: a.rows[0].id, offer2: b.rows[0].id };
+  const { ride_id, offer1, offer2 } = await withTxn(async c => {
+    const ride_id = await createRide(c, ids.customer1UserId, ids.service_area_id, ids.vehicle_type_id, ids.pricing_rule_id, ids.pricing_rule_version);
+    const a = await c.query("INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1,$2,'PENDING',1,now()+interval '5 minutes') RETURNING id", [ride_id, ids.driver1UserId]);
+    const b = await c.query("INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1,$2,'PENDING',1,now()+interval '5 minutes') RETURNING id", [ride_id, ids.driver2UserId]);
+    return { ride_id, offer1: a.rows[0].id, offer2: b.rows[0].id };
   });
-  const accept = async (offerId: string, driverId: string, vehicleId: string): Promise<OpResult> => {
+  const accept = async (offerId: string, driver_id: string, vehicle_id: string): Promise<OpResult> => {
     try {
       return await withTxn(async c => {
         const offer = (await c.query(
           "SELECT ride_id FROM ride_offers WHERE id = $1 AND driver_id = $2",
-          [offerId, driverId],
+          [offerId, driver_id],
         )).rows[0];
         if (!offer) return { rowCount: 0, err: 'OFFER_NOT_FOUND' };
 
@@ -386,7 +386,7 @@ async function scenario8(ids: Ids): Promise<Scenario> {
                start_code_expires_at = now() + interval '10 minutes'
            WHERE id = $3 AND status = 'SEARCHING' AND driver_id IS NULL
            RETURNING id`,
-          [driverId, vehicleId, offer.ride_id],
+          [driver_id, vehicle_id, offer.ride_id],
         );
         if ((assigned.rowCount ?? 0) !== 1) return { rowCount: 0, err: null };
 
@@ -411,9 +411,9 @@ async function scenario8(ids: Ids): Promise<Scenario> {
   const total = a.rowCount + b.rowCount;
   const pass = total === 1 && a.err === null && b.err === null;
   await withTxn(async c => {
-    await c.query("UPDATE ride_offers SET status='CANCELLED', responded_at=now() WHERE ride_id=$1 AND status='PENDING'", [rideId]);
-    await c.query(cleanupRideSql, [[rideId]]);
-    await c.query("DELETE FROM ride_offers WHERE ride_id=$1", [rideId]);
+    await c.query("UPDATE ride_offers SET status='CANCELLED', responded_at=now() WHERE ride_id=$1 AND status='PENDING'", [ride_id]);
+    await c.query(cleanupRideSql, [[ride_id]]);
+    await c.query("DELETE FROM ride_offers WHERE ride_id=$1", [ride_id]);
   });
   return { name, pass, detail: `offer1 rows=${a.rowCount} err=${a.err}; offer2 rows=${b.rowCount} err=${b.err}; accepted total=${total} (expected exactly one committed assignment and one no-op)` };
 }
@@ -423,9 +423,9 @@ async function main(): Promise<void> {
   try {
     const ids = await ensureReferenceData();
     console.log('البيانات المرجعية جاهزة:', JSON.stringify({
-      service_area: ids.serviceAreaId,
-      vehicle_type: ids.vehicleTypeId,
-      pricing_rule: ids.pricingRuleId,
+      service_area: ids.service_area_id,
+      vehicle_type: ids.vehicle_type_id,
+      pricing_rule: ids.pricing_rule_id,
       customer1: ids.customer1UserId,
       customer2: ids.customer2UserId,
       driver1: ids.driver1UserId,

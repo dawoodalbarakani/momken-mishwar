@@ -13,7 +13,7 @@ const rule: PricingRule = {
   perMinuteMinor: 10,
   minimumFareMinor: 300,
   surcharges: [],
-  commissionBps: 1500,
+  commission_bps: 1500,
   roundingStepMinor: 1,
 };
 
@@ -102,7 +102,7 @@ test('manual fare needs an amount and an approver, and skips surcharges/discount
 });
 
 test('invalid rules and inputs are rejected with typed errors', () => {
-  assert.throws(() => computePrice({ ...rule, commissionBps: 10_001 }, { distanceMeters: 1, durationSeconds: 1 }), (e: unknown) => e instanceof PricingError && e.code === 'INVALID_RULE');
+  assert.throws(() => computePrice({ ...rule, commission_bps: 10_001 }, { distanceMeters: 1, durationSeconds: 1 }), (e: unknown) => e instanceof PricingError && e.code === 'INVALID_RULE');
   assert.throws(() => computePrice({ ...rule, roundingStepMinor: 0 }, { distanceMeters: 1, durationSeconds: 1 }), (e: unknown) => e instanceof PricingError && e.code === 'INVALID_RULE');
   assert.throws(() => computePrice({ ...rule, baseFareMinor: 1.5 }, { distanceMeters: 1, durationSeconds: 1 }), (e: unknown) => e instanceof PricingError && e.code === 'INVALID_RULE');
   assert.throws(() => computePrice(rule, { distanceMeters: -1, durationSeconds: 1 }), (e: unknown) => e instanceof PricingError && e.code === 'INVALID_INPUT');

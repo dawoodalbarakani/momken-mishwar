@@ -49,7 +49,7 @@ export interface PricingRule {
   minimumFareMinor: number;
   surcharges: Surcharge[];
   /** Platform commission in basis points of the final total (0..10000). */
-  commissionBps: number;
+  commission_bps: number;
   /** Final total is rounded to a multiple of this (>= 1). */
   roundingStepMinor: number;
 }
@@ -86,7 +86,7 @@ export interface PriceBreakdown {
   lines: PriceLine[];
   discountMinor: number;
   totalMinor: number;
-  commissionBps: number;
+  commission_bps: number;
   commissionMinor: number;
   driverNetMinor: number;
   fixedRouteId?: string;
@@ -122,8 +122,8 @@ function validateRule(rule: PricingRule): void {
   } catch (e) {
     throw new PricingError('INVALID_RULE', (e as Error).message);
   }
-  if (!Number.isInteger(rule.commissionBps) || rule.commissionBps < 0 || rule.commissionBps > 10_000) {
-    throw new PricingError('INVALID_RULE', `commissionBps must be 0..10000, got ${rule.commissionBps}`);
+  if (!Number.isInteger(rule.commission_bps) || rule.commission_bps < 0 || rule.commission_bps > 10_000) {
+    throw new PricingError('INVALID_RULE', `commission_bps must be 0..10000, got ${rule.commission_bps}`);
   }
   if (!Number.isInteger(rule.roundingStepMinor) || rule.roundingStepMinor < 1) {
     throw new PricingError('INVALID_RULE', `roundingStepMinor must be >= 1, got ${rule.roundingStepMinor}`);
@@ -232,7 +232,7 @@ export function computePrice(rule: PricingRule, input: QuoteInput): PriceBreakdo
     totalMinor = rounded;
   }
 
-  const commissionMinor = mulDivRound(totalMinor, rule.commissionBps, 10_000);
+  const commissionMinor = mulDivRound(totalMinor, rule.commission_bps, 10_000);
   const driverNetMinor = totalMinor - commissionMinor;
 
   return {
@@ -245,7 +245,7 @@ export function computePrice(rule: PricingRule, input: QuoteInput): PriceBreakdo
     lines,
     discountMinor,
     totalMinor,
-    commissionBps: rule.commissionBps,
+    commission_bps: rule.commission_bps,
     commissionMinor,
     driverNetMinor,
     fixedRouteId,

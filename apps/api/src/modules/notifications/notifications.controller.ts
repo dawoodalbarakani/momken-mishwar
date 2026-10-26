@@ -23,7 +23,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Create a notification (Arabic templates supported)' })
   @Roles('ADMIN', 'SUPER_ADMIN', 'OPERATIONS_MANAGER', 'SUPPORT_AGENT')
   create(@Body() body: any, @CurrentUser() user: any) {
-    return this.service.create({ ...body, userId: body.userId });
+    return this.service.create({ ...body, user_id: body.user_id });
   }
 
   @Get('me')

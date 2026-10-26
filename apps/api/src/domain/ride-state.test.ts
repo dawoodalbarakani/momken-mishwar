@@ -2,17 +2,17 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Actor, RideSnapshot, RideTransitionError, transition } from './ride-state.js';
 
-const customer: Actor = { role: 'CUSTOMER', userId: 'cust-1' };
-const driver: Actor = { role: 'DRIVER', userId: 'drv-1' };
-const otherDriver: Actor = { role: 'DRIVER', userId: 'drv-2' };
-const otherCustomer: Actor = { role: 'CUSTOMER', userId: 'cust-2' };
+const customer: Actor = { role: 'CUSTOMER', user_id: 'cust-1' };
+const driver: Actor = { role: 'DRIVER', user_id: 'drv-1' };
+const otherDriver: Actor = { role: 'DRIVER', user_id: 'drv-2' };
+const otherCustomer: Actor = { role: 'CUSTOMER', user_id: 'cust-2' };
 const system: Actor = { role: 'SYSTEM' };
-const staff: Actor = { role: 'STAFF', userId: 'staff-1' };
+const staff: Actor = { role: 'STAFF', user_id: 'staff-1' };
 
-const ride = (status: RideSnapshot['status'], driverId: string | null = 'drv-1'): RideSnapshot => ({
+const ride = (status: RideSnapshot['status'], driver_id: string | null = 'drv-1'): RideSnapshot => ({
   status,
-  customerId: 'cust-1',
-  driverId,
+  customer_id: 'cust-1',
+  driver_id,
 });
 
 const code = (e: unknown) => (e instanceof RideTransitionError ? e.code : 'NOT_A_RIDE_ERROR');
@@ -60,28 +60,28 @@ test('search expiry is a system-only event', () => {
 });
 
 test('cancellation records who cancelled and requires a reason', () => {
-  const byCustomer = transition(ride('ASSIGNED'), 'CANCEL', customer, { cancelReasonCode: 'CHANGED_MIND' });
-  assert.deepEqual(byCustomer, { to: 'CANCELLED', cancelledBy: 'CUSTOMER', cancelReasonCode: 'CHANGED_MIND' });
-  assert.equal(transition(ride('ARRIVING'), 'CANCEL', driver, { cancelReasonCode: 'VEHICLE_ISSUE' }).cancelledBy, 'DRIVER');
-  assert.equal(transition(ride('SEARCHING', null), 'CANCEL', customer, { cancelReasonCode: 'X' }).to, 'CANCELLED');
+  const byCustomer = transition(ride('ASSIGNED'), 'CANCEL', customer, { cancel_reason_code: 'CHANGED_MIND' });
+  assert.deepEqual(byCustomer, { to: 'CANCELLED', cancelledBy: 'CUSTOMER', cancel_reason_code: 'CHANGED_MIND' });
+  assert.equal(transition(ride('ARRIVING'), 'CANCEL', driver, { cancel_reason_code: 'VEHICLE_ISSUE' }).cancelledBy, 'DRIVER');
+  assert.equal(transition(ride('SEARCHING', null), 'CANCEL', customer, { cancel_reason_code: 'X' }).to, 'CANCELLED');
   throwsWith(() => transition(ride('ASSIGNED'), 'CANCEL', customer), 'REASON_REQUIRED');
 });
 
 test('strangers cannot cancel someone else\'s ride', () => {
-  throwsWith(() => transition(ride('ASSIGNED'), 'CANCEL', otherCustomer, { cancelReasonCode: 'X' }), 'FORBIDDEN_ACTOR');
-  throwsWith(() => transition(ride('ASSIGNED'), 'CANCEL', otherDriver, { cancelReasonCode: 'X' }), 'FORBIDDEN_ACTOR');
-  throwsWith(() => transition(ride('SEARCHING', null), 'CANCEL', driver, { cancelReasonCode: 'X' }), 'FORBIDDEN_ACTOR');
+  throwsWith(() => transition(ride('ASSIGNED'), 'CANCEL', otherCustomer, { cancel_reason_code: 'X' }), 'FORBIDDEN_ACTOR');
+  throwsWith(() => transition(ride('ASSIGNED'), 'CANCEL', otherDriver, { cancel_reason_code: 'X' }), 'FORBIDDEN_ACTOR');
+  throwsWith(() => transition(ride('SEARCHING', null), 'CANCEL', driver, { cancel_reason_code: 'X' }), 'FORBIDDEN_ACTOR');
 });
 
 test('a trip in progress can only be cancelled by staff', () => {
-  throwsWith(() => transition(ride('IN_PROGRESS'), 'CANCEL', customer, { cancelReasonCode: 'X' }), 'FORBIDDEN_ACTOR');
-  throwsWith(() => transition(ride('IN_PROGRESS'), 'CANCEL', driver, { cancelReasonCode: 'X' }), 'FORBIDDEN_ACTOR');
-  assert.equal(transition(ride('IN_PROGRESS'), 'CANCEL', staff, { cancelReasonCode: 'SAFETY' }).cancelledBy, 'STAFF');
+  throwsWith(() => transition(ride('IN_PROGRESS'), 'CANCEL', customer, { cancel_reason_code: 'X' }), 'FORBIDDEN_ACTOR');
+  throwsWith(() => transition(ride('IN_PROGRESS'), 'CANCEL', driver, { cancel_reason_code: 'X' }), 'FORBIDDEN_ACTOR');
+  assert.equal(transition(ride('IN_PROGRESS'), 'CANCEL', staff, { cancel_reason_code: 'SAFETY' }).cancelledBy, 'STAFF');
 });
 
 test('terminal states accept nothing', () => {
   for (const s of ['COMPLETED', 'CANCELLED', 'NO_DRIVER_FOUND'] as const) {
-    throwsWith(() => transition(ride(s), 'CANCEL', staff, { cancelReasonCode: 'X' }), 'INVALID_TRANSITION');
+    throwsWith(() => transition(ride(s), 'CANCEL', staff, { cancel_reason_code: 'X' }), 'INVALID_TRANSITION');
     throwsWith(() => transition(ride(s), 'TRIP_COMPLETED', driver), 'INVALID_TRANSITION');
   }
 });

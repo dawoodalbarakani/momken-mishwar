@@ -44,7 +44,7 @@ export class AdminController {
   @Get('pricing-rules')
   @ApiOperation({ summary: 'List pricing rules' })
   @Roles('ADMIN', 'SUPER_ADMIN', 'OPERATIONS_MANAGER')
-  pricingRules(@Query() q: any) {
+  pricing_rules(@Query() q: any) {
     return this.service.listPricingRules(q);
   }
 

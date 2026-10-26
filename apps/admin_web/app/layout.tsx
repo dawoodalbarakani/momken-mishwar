@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SessionProvider } from "@/components/providers/session-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,17 +14,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-   
-      <html dir="rtl" lang="ar" className="scroll-smooth">
-        <head>
-          <meta charSet="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <link rel="icon" href="/favicon.ico" />
-        </head>
-        <body className="antialiased">
+    <html dir="rtl" lang="ar" className="scroll-smooth">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
+      </head>
+      <body className="antialiased">
+        <TooltipProvider>
           <SessionProvider>{children}</SessionProvider>
-        </body>
-      </html>
-
+        </TooltipProvider>
+      </body>
+    </html>
   );
 }
+

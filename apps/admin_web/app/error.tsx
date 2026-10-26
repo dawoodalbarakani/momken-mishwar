@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function Error({
   error,
@@ -18,12 +19,9 @@ export default function Error({
       <div className="text-center">
         <h2 className="text-xl font-bold text-red-800">حدث خطأ أثناء تحميل الصفحة</h2>
         <p className="text-gray-600 mt-2">{error.message}</p>
-        <button
-          onClick={() => reset()}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-600 text-white hover:bg-brand-700"
-        >
+        <Button className="mt-4" onClick={() => reset()}>
           إعادة المحاولة
-        </button>
+        </Button>
       </div>
     </div>
   );

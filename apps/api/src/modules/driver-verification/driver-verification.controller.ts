@@ -22,14 +22,14 @@ export class DriverVerificationController {
   @Post('review')
   @ApiOperation({ summary: 'Approve/reject/suspend a driver (four-eyes via reviewer)' })
   @Roles('OPERATIONS_MANAGER', 'ADMIN', 'SUPER_ADMIN')
-  review(@Body() body: { driverId: string; status: VerificationStatus; note?: string; rejectionReason?: string }, @CurrentUser() user: any) {
+  review(@Body() body: { driver_id: string; status: VerificationStatus; note?: string; rejection_reason?: string }, @CurrentUser() user: any) {
     return this.service.review({ ...body, reviewedBy: user.sub });
   }
 
-  @Get(':driverId/status')
+  @Get(':driver_id/status')
   @ApiOperation({ summary: 'Get driver verification status' })
   @Roles('ADMIN', 'SUPER_ADMIN', 'OPERATIONS_MANAGER', 'SUPPORT_AGENT', 'DRIVER')
-  status(@Param('driverId') driverId: string) {
-    return this.service.getStatus(driverId);
+  status(@Param('driver_id') driver_id: string) {
+    return this.service.getStatus(driver_id);
   }
 }

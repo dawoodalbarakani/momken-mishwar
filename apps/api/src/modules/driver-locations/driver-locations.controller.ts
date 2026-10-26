@@ -23,7 +23,7 @@ export class DriverLocationsController {
   @ApiOperation({ summary: 'Push driver location batch' })
   @Roles('DRIVER')
   updateBatch(@Body() body: { updates: any[] }, @CurrentUser() user: any) {
-    return this.service.updateBatch({ driverId: user.sub, ...body });
+    return this.service.updateBatch({ driver_id: user.sub, ...body });
   }
 
   @Get('latest')

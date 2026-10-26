@@ -26,15 +26,15 @@ export class PricingController {
       pickupLon: body.pickupLon,
       destLat: body.destLat,
       destLon: body.destLon,
-      serviceAreaId: body.serviceAreaId,
-      vehicleTypeId: body.vehicleTypeId,
+      service_area_id: body.service_area_id,
+      vehicle_type_id: body.vehicle_type_id,
     });
   }
 
   @Get('pricing-rules')
   @ApiOperation({ summary: 'List active pricing rules' })
   @Roles('ADMIN', 'SUPER_ADMIN', 'OPERATIONS_MANAGER')
-  rules(@Query('serviceAreaId') serviceAreaId?: string) {
-    return this.service.listRules(serviceAreaId);
+  rules(@Query('service_area_id') service_area_id?: string) {
+    return this.service.listRules(service_area_id);
   }
 }

@@ -1,9 +1,10 @@
 import { getServerToken } from "@/lib/auth-server";
 import { apiRequest } from "@/lib/api";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import { Search } from "lucide-react";
 
 type AuditLog = {
@@ -44,58 +45,66 @@ export default async function AuditPage({
 
   return (
     <div className="container-admin py-6">
-      <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-3 items-end mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 text-sm font-medium mb-1">
-              <Search className="w-4 h-4" /> البحث في السجل
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row gap-3 items-end">
+            <div className="flex-1">
+              <InputGroup>
+                <InputGroupAddon>
+                  <Search className="size-4" />
+                </InputGroupAddon>
+                <InputGroupInput
+                  defaultValue={searchParams.q || ""}
+                  placeholder="الموظف، العملية، الكيان، المعرف"
+                />
+              </InputGroup>
             </div>
-            <Input
-              defaultValue={searchParams.q || ""}
-              placeholder="الموظف، العملية، الكيان، المعرف"
-            />
+            <CardDescription className="text-xs hidden md:block">
+              استدعي API حقيقي: `GET /v1/admin/audit`. السجل غير قابل للتعديل.
+            </CardDescription>
           </div>
-          <p className="text-xs text-gray-500 hidden md:block">
-            استدعي API حقيقي: `GET /v1/admin/audit`. السجل غير قابل للتعديل.
-          </p>
-        </div>
-        <div className="overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>الوقت</TableHead>
-                <TableHead>الموظف</TableHead>
-                <TableHead>الدور</TableHead>
-                <TableHead>العملية</TableHead>
-                <TableHead>الكيان</TableHead>
-                <TableHead>معرف الكيان</TableHead>
-                <TableHead>عنوان IP</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell className="font-mono text-xs">
-                    {new Date(l.at).toLocaleString("ar-SA")}
-                  </TableCell>
-                  <TableCell>{l.actor}</TableCell>
-                  <TableCell className="font-mono text-xs text-gray-500">{l.actor_role}</TableCell>
-                  <TableCell className="font-mono text-xs">{l.action}</TableCell>
-                  <TableCell>{l.entity}</TableCell>
-                  <TableCell className="font-mono text-xs">{l.entity_id}</TableCell>
-                  <TableCell className="font-mono text-xs">{l.ip || "—"}</TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-500 py-4">
-                    لا توجد سجلات تدقيق
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        </CardHeader>
+        <CardContent>
+          {filtered.length === 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>لا توجد سجلات تدقيق</EmptyTitle>
+                <EmptyDescription>لم يتم العثور على سجلات تدقيق.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <div className="overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>الوقت</TableHead>
+                    <TableHead>الموظف</TableHead>
+                    <TableHead>الدور</TableHead>
+                    <TableHead>العملية</TableHead>
+                    <TableHead>الكيان</TableHead>
+                    <TableHead>معرف الكيان</TableHead>
+                    <TableHead>عنوان IP</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="font-mono text-xs">
+                        {new Date(l.at).toLocaleString("ar-SA")}
+                      </TableCell>
+                      <TableCell>{l.actor}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{l.actor_role}</TableCell>
+                      <TableCell className="font-mono text-xs">{l.action}</TableCell>
+                      <TableCell>{l.entity}</TableCell>
+                      <TableCell className="font-mono text-xs">{l.entity_id}</TableCell>
+                      <TableCell className="font-mono text-xs">{l.ip || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
       </Card>
     </div>
   );

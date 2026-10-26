@@ -23,12 +23,12 @@ export class RatingsController {
   @ApiOperation({ summary: 'Rate a ride participant' })
   @Roles('CUSTOMER', 'DRIVER')
   create(@Body() body: any, @CurrentUser() user: any) {
-    return this.service.create({ ...body, raterId: user.sub });
+    return this.service.create({ ...body, rater_id: user.sub });
   }
 
   @Get('me')
   @ApiOperation({ summary: 'Ratings received by me' })
-  mine(@Query('rateeId') rateeId: string) {
-    return this.service.listForRatee(rateeId);
+  mine(@Query('ratee_id') ratee_id: string) {
+    return this.service.listForRatee(ratee_id);
   }
 }

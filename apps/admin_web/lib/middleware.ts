@@ -61,7 +61,3 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: ["/", "/drivers/:path*", "/rides/:path*", "/pricing/:path*", "/finance/:path*", "/support/:path*", "/audit/:path*", "/login"],
-};

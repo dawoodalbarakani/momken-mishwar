@@ -19,11 +19,11 @@ import { Roles } from '../../common/decorators/roles.decorator.js';
 export class PaymentsController {
   constructor(private readonly service: PaymentsService) {}
 
-  @Post('rides/:rideId')
+  @Post('rides/:ride_id')
   @ApiOperation({ summary: 'Record a cash payment for a ride' })
   @Roles('CUSTOMER', 'DRIVER')
-  create(@Param('rideId') rideId: string, @Body() body: any) {
-    return this.service.createForRide({ rideId, ...body });
+  create(@Param('ride_id') ride_id: string, @Body() body: any) {
+    return this.service.createForRide({ ride_id, ...body });
   }
 
   @Get()

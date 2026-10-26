@@ -1,7 +1,7 @@
 /**
  * Trip start code.
  *
- * The code is *derived*, not stored: code = HMAC-SHA256(secret, rideId || nonce)
+ * The code is *derived*, not stored: code = HMAC-SHA256(secret, ride_id || nonce)
  * truncated to N decimal digits. The database keeps only a random per-ride
  * `start_code_nonce`, an expiry and an attempt counter, so a database leak
  * alone does not reveal any code, and the customer app can be shown the code
@@ -23,9 +23,9 @@ export function newStartCodeNonce(): Buffer {
   return randomBytes(16);
 }
 
-export function deriveStartCode(secret: Buffer | string, rideId: string, nonce: Buffer, digits = START_CODE_DIGITS): string {
+export function deriveStartCode(secret: Buffer | string, ride_id: string, nonce: Buffer, digits = START_CODE_DIGITS): string {
   if (digits < 4 || digits > 8) throw new RangeError('digits must be between 4 and 8');
-  const mac = createHmac('sha256', secret).update(rideId).update('\u0000').update(nonce).digest();
+  const mac = createHmac('sha256', secret).update(ride_id).update('\u0000').update(nonce).digest();
   const n = mac.readUInt32BE(0);
   const mod = 10 ** digits;
   return String(n % mod).padStart(digits, '0');
@@ -37,24 +37,24 @@ export type StartCodeResult = { ok: true } | { ok: false; reason: StartCodeFailu
 
 export interface VerifyStartCodeInput {
   secret: Buffer | string;
-  rideId: string;
+  ride_id: string;
   nonce: Buffer;
   submitted: string;
-  expiresAt: Date;
+  expires_at: Date;
   now: Date;
   /** Attempts used *including* the current one (already incremented in SQL). */
   attemptsUsed: number;
-  maxAttempts: number;
+  max_attempts: number;
   digits?: number;
 }
 
 export function verifyStartCode(input: VerifyStartCodeInput): StartCodeResult {
   const digits = input.digits ?? START_CODE_DIGITS;
-  if (input.attemptsUsed > input.maxAttempts) return { ok: false, reason: 'LOCKED' };
-  if (input.now.getTime() >= input.expiresAt.getTime()) return { ok: false, reason: 'EXPIRED' };
+  if (input.attemptsUsed > input.max_attempts) return { ok: false, reason: 'LOCKED' };
+  if (input.now.getTime() >= input.expires_at.getTime()) return { ok: false, reason: 'EXPIRED' };
   if (!new RegExp(`^[0-9]{${digits}}$`).test(input.submitted)) return { ok: false, reason: 'MALFORMED' };
 
-  const expected = Buffer.from(deriveStartCode(input.secret, input.rideId, input.nonce, digits), 'utf8');
+  const expected = Buffer.from(deriveStartCode(input.secret, input.ride_id, input.nonce, digits), 'utf8');
   const given = Buffer.from(input.submitted, 'utf8');
   const equal = expected.length === given.length && timingSafeEqual(expected, given);
   return equal ? { ok: true } : { ok: false, reason: 'MISMATCH' };

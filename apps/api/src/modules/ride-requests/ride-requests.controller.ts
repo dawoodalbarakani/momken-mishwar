@@ -27,14 +27,14 @@ export class RideRequestsController {
   @Idempotency()
   create(@Body() body: any, @CurrentUser() user: any) {
     return this.service.create({
-      customerId: user.sub,
-      serviceAreaId: body.serviceAreaId,
-      vehicleTypeId: body.vehicleTypeId,
+      customer_id: user.sub,
+      service_area_id: body.service_area_id,
+      vehicle_type_id: body.vehicle_type_id,
       pickupLat: body.pickupLat,
       pickupLon: body.pickupLon,
       destLat: body.destLat,
       destLon: body.destLon,
-      idempotencyKey: body.idempotencyKey,
+      idempotency_key: body.idempotency_key,
     });
   }
 
@@ -57,6 +57,6 @@ export class RideRequestsController {
   @Roles('CUSTOMER')
   @Idempotency()
   cancel(@Param('id') id: string, @Body() body: { reasonCode: string; note?: string }, @CurrentUser() user: any) {
-    return this.service.cancel({ rideId: id, customerId: user.sub, reasonCode: body.reasonCode, note: body.note });
+    return this.service.cancel({ ride_id: id, customer_id: user.sub, reasonCode: body.reasonCode, note: body.note });
   }
 }

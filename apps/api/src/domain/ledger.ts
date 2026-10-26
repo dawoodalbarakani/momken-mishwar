@@ -27,14 +27,14 @@ export type LedgerEntryType =
   | 'REVERSAL';
 
 export interface LedgerEntryDraft {
-  driverId: string;
-  rideId: string | null;
+  driver_id: string;
+  ride_id: string | null;
   payoutId: string | null;
-  entryType: LedgerEntryType;
+  entry_type: LedgerEntryType;
   /** Signed, minor units, never zero. */
   amountMinor: number;
   currency: CurrencyCode;
-  idempotencyKey: string;
+  idempotency_key: string;
   memo?: string;
 }
 
@@ -49,8 +49,8 @@ export class LedgerError extends Error {
 }
 
 export interface CashRideSettlementInput {
-  rideId: string;
-  driverId: string;
+  ride_id: string;
+  driver_id: string;
   currency: CurrencyCode;
   /** Values come from the ride's stored price snapshot, never recomputed here. */
   grossMinor: number;
@@ -70,19 +70,19 @@ export function buildCashRideEntries(input: CashRideSettlementInput): LedgerEntr
   }
 
   const entries: LedgerEntryDraft[] = [];
-  const base = { driverId: input.driverId, rideId: input.rideId, payoutId: null, currency: input.currency };
+  const base = { driver_id: input.driver_id, ride_id: input.ride_id, payoutId: null, currency: input.currency };
   // Zero-amount entries are not posted (DB CHECK amount <> 0).
   if (input.driverNetMinor !== 0) {
-    entries.push({ ...base, entryType: 'EARNING', amountMinor: input.driverNetMinor, idempotencyKey: `ride:${input.rideId}:EARNING` });
+    entries.push({ ...base, entry_type: 'EARNING', amountMinor: input.driverNetMinor, idempotency_key: `ride:${input.ride_id}:EARNING` });
   }
   if (input.grossMinor !== 0) {
-    entries.push({ ...base, entryType: 'CASH_COLLECTED', amountMinor: -input.grossMinor, idempotencyKey: `ride:${input.rideId}:CASH_COLLECTED` });
+    entries.push({ ...base, entry_type: 'CASH_COLLECTED', amountMinor: -input.grossMinor, idempotency_key: `ride:${input.ride_id}:CASH_COLLECTED` });
   }
   return entries;
 }
 
 export interface SettlementInput {
-  driverId: string;
+  driver_id: string;
   payoutId: string;
   currency: CurrencyCode;
   amountMinor: number;
@@ -95,14 +95,14 @@ export function buildSettlementEntry(input: SettlementInput): LedgerEntryDraft {
   if (input.amountMinor === 0) throw new LedgerError('INVALID_AMOUNT', 'settlement amount must be > 0');
   const toPlatform = input.direction === 'DRIVER_TO_PLATFORM';
   return {
-    driverId: input.driverId,
-    rideId: null,
+    driver_id: input.driver_id,
+    ride_id: null,
     payoutId: input.payoutId,
-    entryType: toPlatform ? 'SETTLEMENT_FROM_DRIVER' : 'SETTLEMENT_TO_DRIVER',
+    entry_type: toPlatform ? 'SETTLEMENT_FROM_DRIVER' : 'SETTLEMENT_TO_DRIVER',
     // Driver pays platform -> driver's debt shrinks (+). Platform pays driver -> credit shrinks (-).
     amountMinor: toPlatform ? input.amountMinor : -input.amountMinor,
     currency: input.currency,
-    idempotencyKey: `payout:${input.payoutId}:${toPlatform ? 'FROM_DRIVER' : 'TO_DRIVER'}`,
+    idempotency_key: `payout:${input.payoutId}:${toPlatform ? 'FROM_DRIVER' : 'TO_DRIVER'}`,
   };
 }
 

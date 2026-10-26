@@ -12,8 +12,8 @@ export class LocalAuthGuard extends PassportStrategy(Strategy, 'local') {
 
   async validate(email: string, password: string) {
     const user = await this.users.findByEmail(email);
-    if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
-    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!user || !user.password_hash) throw new UnauthorizedException('Invalid credentials');
+    const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
     return user;
   }

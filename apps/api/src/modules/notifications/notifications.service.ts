@@ -6,38 +6,38 @@ export class NotificationsService {
   constructor(private prisma: PrismaService) {}
 
   async create(params: {
-    userId: string;
+    user_id: string;
     kind: string;
     title: string;
     body: string;
     data?: any;
-    dedupeKey?: string;
+    dedupe_key?: string;
     locale?: 'ar' | 'en';
   }) {
     return this.prisma.notifications.create({
       data: {
-        userId: params.userId,
+        user_id: params.user_id,
         kind: params.kind,
         title: params.title,
         body: params.body,
         data: params.data ?? {},
-        dedupeKey: params.dedupeKey ?? null,
+        dedupe_key: params.dedupe_key ?? null,
       },
     });
   }
 
-  async listForUser(userId: string, limit = 50) {
+  async listForUser(user_id: string, limit = 50) {
     return this.prisma.notifications.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
+      where: { user_id },
+      orderBy: { created_at: 'desc' },
       take: Math.min(limit, 100),
     });
   }
 
-  async markRead(id: string, userId: string) {
+  async markRead(id: string, user_id: string) {
     return this.prisma.notifications.update({
       where: { id },
-      data: { readAt: new Date() },
+      data: { read_at: new Date() },
     });
   }
 }
