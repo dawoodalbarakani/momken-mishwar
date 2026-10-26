@@ -9,44 +9,39 @@ class RideRequestScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(rideRequestViewModelProvider);
-    return ListenableBuilder(
-      listenable: vm,
-      builder: (context, _) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('طلب الرحلة')),
-          body: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('جاري البحث عن سائق قريب منك...'),
-                const SizedBox(height: 24),
-                if (vm.status == RideRequestStatus.driverFound && vm.driverName != null) ...[
-                  Text('تم العثور على السائق: ${vm.driverName}'),
-                  const SizedBox(height: 16),
-                ],
-                const SizedBox(height: 24),
-                SizedBox(
-                  height: 50,
-                  child: vm.isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                          onPressed: vm.status == RideRequestStatus.searching
-                              ? () => vm.cancelRide()
-                              : null,
-                          child: const Text('إلغاء الطلب'),
-                        ),
-                ),
-                if (vm.error != null) ...[
-                  const SizedBox(height: 16),
-                  Text(vm.error!, style: const TextStyle(color: Colors.red)),
-                ],
-              ],
+    final state = ref.watch(rideRequestViewModelProvider);
+    return Scaffold(
+      appBar: AppBar(title: const Text('طلب الرحلة')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('جاري البحث عن سائق قريب منك...'),
+            const SizedBox(height: 24),
+            if (state.status == RideRequestStatus.driverFound && state.driverName != null) ...[
+              Text('تم العثور على السائق: ${state.driverName}'),
+              const SizedBox(height: 16),
+            ],
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 50,
+              child: state.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: state.status == RideRequestStatus.searching
+                          ? () => ref.read(rideRequestViewModelProvider.notifier).cancelRide()
+                          : null,
+                      child: const Text('إلغاء الطلب'),
+                    ),
             ),
-          ),
-        );
-      },
+            if (state.error != null) ...[
+              const SizedBox(height: 16),
+              Text(state.error!, style: const TextStyle(color: Colors.red)),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

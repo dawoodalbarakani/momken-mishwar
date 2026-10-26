@@ -1,43 +1,57 @@
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/repositories/ride_repository.dart';
 import '../../../../domain/models/quote.dart';
 
-/// ViewModel for the fare quote screen.
-class QuoteViewModel extends ChangeNotifier {
-  QuoteViewModel({required RideRepository rideRepository}) : _rideRepository = rideRepository;
+class QuoteState {
+  const QuoteState({this.quote, this.isLoading = false, this.error});
 
-  final RideRepository _rideRepository;
+  final Quote? quote;
+  final bool isLoading;
+  final String? error;
 
-  Quote? _quote;
-  Quote? get quote => _quote;
+  QuoteState copyWith({
+    Quote? quote,
+    bool? isLoading,
+    String? error,
+    bool clearError = false,
+  }) {
+    return QuoteState(
+      quote: quote ?? this.quote,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
 
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
+  @override
+  bool operator ==(Object other) =>
+      other is QuoteState &&
+      other.quote == quote &&
+      other.isLoading == isLoading &&
+      other.error == error;
 
-  String? _error;
-  String? get error => _error;
+  @override
+  int get hashCode => Object.hash(quote, isLoading, error);
+}
+
+/// Notifier for the fare quote screen.
+class QuoteNotifier extends Notifier<QuoteState> {
+  @override
+  QuoteState build() => const QuoteState();
+
+  RideRepository get _rideRepository => ref.read(rideRepositoryProvider);
 
   Future<bool> fetchQuote({required String pickup, required String destination}) async {
-    _setLoading(true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      _quote = await _rideRepository.fetchQuote(pickup: pickup, destination: destination);
-      _setLoading(false);
+      final quote = await _rideRepository.fetchQuote(pickup: pickup, destination: destination);
+      state = state.copyWith(quote: quote, isLoading: false);
       return true;
     } catch (e) {
-      _setLoading(false, error: 'فشل جلب تقدير الأجرة');
+      state = state.copyWith(isLoading: false, error: 'فشل جلب تقدير الأجرة');
       return false;
     }
   }
-
-  void _setLoading(bool loading, {String? error}) {
-    _isLoading = loading;
-    if (error != null) _error = error;
-    notifyListeners();
-  }
 }
 
-final quoteViewModelProvider = ChangeNotifierProvider(
-  (ref) => QuoteViewModel(rideRepository: ref.read(rideRepositoryProvider)),
-);
+final quoteViewModelProvider = NotifierProvider<QuoteNotifier, QuoteState>(QuoteNotifier.new);

@@ -1,7 +1,4 @@
 
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../data/repositories/map_repository.dart';
@@ -9,98 +6,108 @@ import '../../../../data/services/connectivity_service.dart';
 import '../../../../domain/models/saved_place.dart';
 import '../../../../data/services/map_service.dart';
 
-/// ViewModel for the home screen: location picking, saved places, connectivity.
-class HomeViewModel extends ChangeNotifier {
-  HomeViewModel({
-    required MapRepository mapRepository,
-    required ConnectivityService connectivityService,
-  })  : _mapRepository = mapRepository,
-        _connectivityService = connectivityService {
-    _listenConnectivity();
+class HomeState {
+  const HomeState({
+    this.currentLocation,
+    this.pickup,
+    this.destination,
+    this.savedPlaces = const [],
+    this.connectionStatus = ConnectionStatus.unknown,
+    this.isLoading = false,
+    this.error,
+  });
+
+  final LatLng? currentLocation;
+  final LatLng? pickup;
+  final LatLng? destination;
+  final List<SavedPlace> savedPlaces;
+  final ConnectionStatus connectionStatus;
+  final bool isLoading;
+  final String? error;
+
+  HomeState copyWith({
+    LatLng? currentLocation,
+    LatLng? pickup,
+    LatLng? destination,
+    List<SavedPlace>? savedPlaces,
+    ConnectionStatus? connectionStatus,
+    bool? isLoading,
+    String? error,
+    bool clearPickup = false,
+    bool clearDestination = false,
+    bool clearError = false,
+  }) {
+    return HomeState(
+      currentLocation: currentLocation ?? this.currentLocation,
+      pickup: clearPickup ? null : (pickup ?? this.pickup),
+      destination: clearDestination ? null : (destination ?? this.destination),
+      savedPlaces: savedPlaces ?? this.savedPlaces,
+      connectionStatus: connectionStatus ?? this.connectionStatus,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+    );
   }
 
-  final MapRepository _mapRepository;
-  final ConnectivityService _connectivityService;
-  StreamSubscription? _connectivitySubscription;
+  @override
+  bool operator ==(Object other) =>
+      other is HomeState &&
+      other.currentLocation == currentLocation &&
+      other.pickup == pickup &&
+      other.destination == destination &&
+      other.savedPlaces == savedPlaces &&
+      other.connectionStatus == connectionStatus &&
+      other.isLoading == isLoading &&
+      other.error == error;
 
-  LatLng? _currentLocation;
-  LatLng? get currentLocation => _currentLocation;
+  @override
+  int get hashCode => Object.hash(
+      currentLocation, pickup, destination, savedPlaces, connectionStatus, isLoading, error);
+}
 
-  LatLng? _pickup;
-  LatLng? get pickup => _pickup;
-
-  LatLng? _destination;
-  LatLng? get destination => _destination;
-
-  final List<SavedPlace> _savedPlaces = const [];
-  List<SavedPlace> get savedPlaces => _savedPlaces;
-
-  ConnectionStatus _connectionStatus = ConnectionStatus.unknown;
-  ConnectionStatus get connectionStatus => _connectionStatus;
-
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
-
-  String? _error;
-  String? get error => _error;
-
-  void _listenConnectivity() {
-    _connectivitySubscription = _connectivityService.watch().listen((status) {
-      _connectionStatus = status;
-      notifyListeners();
+/// Notifier for the home screen: location picking, saved places, connectivity.
+class HomeNotifier extends Notifier<HomeState> {
+  @override
+  HomeState build() {
+    final subscription = ref.read(connectivityServiceProvider).watch().listen((status) {
+      state = state.copyWith(connectionStatus: status);
     });
+    ref.onDispose(subscription.cancel);
+    return const HomeState();
   }
 
-  Future<List<PlaceResult>> searchPlaces(String query) async => _mapRepository.searchPlaces(query);
+  MapRepository get _mapRepository => ref.read(mapRepositoryProvider);
+
+  Future<List<PlaceResult>> searchPlaces(String query) => _mapRepository.searchPlaces(query);
 
   Future<void> locateMe() async {
-    _setLoading(true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       final picked = await _mapRepository.pickLocation();
-      _currentLocation = picked;
-      _setLoading(false);
+      state = state.copyWith(currentLocation: picked, isLoading: false);
     } catch (e) {
-      _setLoading(false, error: 'تعذر تحديد الموقع الحالي');
+      state = state.copyWith(isLoading: false, error: 'تعذر تحديد الموقع الحالي');
     }
   }
 
   void setPickup(LatLng? point) {
-    _pickup = point;
-    notifyListeners();
+    state = point == null
+        ? state.copyWith(clearPickup: true)
+        : state.copyWith(pickup: point);
   }
 
   void setDestination(LatLng? point) {
-    _destination = point;
-    notifyListeners();
+    state = point == null
+        ? state.copyWith(clearDestination: true)
+        : state.copyWith(destination: point);
   }
 
   void clearSelection() {
-    _pickup = null;
-    _destination = null;
-    notifyListeners();
+    state = state.copyWith(clearPickup: true, clearDestination: true);
   }
 
   void setError(String? error) {
-    _error = error;
-    notifyListeners();
-  }
-
-  void _setLoading(bool loading, {String? error}) {
-    _isLoading = loading;
-    if (error != null) _error = error;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _connectivitySubscription?.cancel();
-    super.dispose();
+    state = error == null ? state.copyWith(clearError: true) : state.copyWith(error: error);
   }
 }
 
-final homeViewModelProvider = ChangeNotifierProvider(
-  (ref) => HomeViewModel(
-    mapRepository: ref.read(mapRepositoryProvider),
-    connectivityService: ref.read(connectivityServiceProvider),
-  ),
-);
+final homeViewModelProvider = NotifierProvider<HomeNotifier, HomeState>(HomeNotifier.new);

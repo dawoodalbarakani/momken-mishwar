@@ -1,84 +1,134 @@
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../data/services/dio_client.dart';
 import '../../../../domain/models/auth_user.dart';
 
-/// ViewModel for the authentication flow (request / verify OTP).
-class AuthViewModel extends ChangeNotifier {
-  AuthViewModel({required AuthRepository authRepository}) : _authRepository = authRepository;
+class AuthState {
+  const AuthState({
+    this.user,
+    this.token,
+    this.isLoading = false,
+    this.error,
+    this.isInitializing = true,
+  });
 
-  final AuthRepository _authRepository;
+  final AuthUser? user;
+  final String? token;
+  final bool isLoading;
+  final String? error;
 
-  AuthUser? _user;
-  AuthUser? get user => _user;
+  /// True until the one-time session restore has completed. The router uses
+  /// this to hold on the splash until auth is known.
+  final bool isInitializing;
 
-  String? _token;
-  String? get token => _token;
+  bool get isAuthenticated => token != null && token!.isNotEmpty;
 
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
+  AuthState copyWith({
+    AuthUser? user,
+    String? token,
+    bool? isLoading,
+    String? error,
+    bool? isInitializing,
+    bool clearSession = false,
+    bool clearError = false,
+  }) {
+    return AuthState(
+      user: clearSession ? null : (user ?? this.user),
+      token: clearSession ? null : (token ?? this.token),
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+      isInitializing: isInitializing ?? this.isInitializing,
+    );
+  }
 
-  String? _error;
-  String? get error => _error;
+  @override
+  bool operator ==(Object other) =>
+      other is AuthState &&
+      other.user == user &&
+      other.token == token &&
+      other.isLoading == isLoading &&
+      other.error == error &&
+      other.isInitializing == isInitializing;
 
-  /// Loads any persisted session token on startup.
+  @override
+  int get hashCode => Object.hash(user, token, isLoading, error, isInitializing);
+}
+
+class AuthNotifier extends Notifier<AuthState> {
+  @override
+  AuthState build() => const AuthState();
+
+  AuthRepository get _authRepository => ref.read(authRepositoryProvider);
+
   Future<bool> initialize() async {
-    _setLoading(true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      _token = await _authRepository.accessToken;
-      // TODO: fetch GET /v1/me to populate [user] once the server contract is stable.
+      final token = await _authRepository.accessToken;
+      if (token != null && token.isNotEmpty) {
+        // TODO: fetch GET /v1/me to populate [user] once the server contract is stable.
+        state = state.copyWith(
+          token: token,
+          isLoading: false,
+          isInitializing: false,
+        );
+        return true;
+      }
+      return false;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        isInitializing: false,
+        error: 'تعذر استعادة الجلسة',
+      );
+      return false;
     } finally {
-      _setLoading(false);
+      // Guarantees the splash resolves even when the token path is taken or an
+      // error was thrown above.
+      state = state.copyWith(isLoading: false, isInitializing: false);
     }
-    return _token != null && _token!.isNotEmpty;
   }
 
   Future<bool> requestOtp(String phone) async {
-    _setLoading(true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       final ok = await _authRepository.requestOtp(phone);
-      _setLoading(false);
+      state = state.copyWith(isLoading: false);
       return ok;
     } catch (e) {
-      _setLoading(false, error: 'فشل طلب رمز التحقق');
+      state = state.copyWith(isLoading: false, error: 'فشل طلب رمز التحقق');
       return false;
     }
   }
 
   Future<bool> verifyOtp(String phone, String otp) async {
-    _setLoading(true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       final result = await _authRepository.verifyOtp(phone, otp);
-      _token = result.accessToken;
-      _user = result.user;
-      _setLoading(false);
+      state = state.copyWith(
+        token: result.accessToken,
+        user: result.user,
+        isLoading: false,
+        // A successful verify ends any pending initialization: the session is
+        // known, so the guard should never fall back to the splash.
+        isInitializing: false,
+      );
       return true;
     } on ApiException catch (e) {
-      _setLoading(false, error: e.messageAr);
+      state = state.copyWith(isLoading: false, error: e.messageAr);
       return false;
     } catch (e) {
-      _setLoading(false, error: 'فشل التحقق من الرمز');
+      state = state.copyWith(isLoading: false, error: 'فشل التحقق من الرمز');
       return false;
     }
   }
 
   Future<void> logout() async {
     await _authRepository.logout();
-    _token = null;
-    _user = null;
-    _error = null;
-    notifyListeners();
-  }
-
-  void _setLoading(bool loading, {String? error}) {
-    _isLoading = loading;
-    if (error != null) _error = error;
-    notifyListeners();
+    // isInitializing: false → the guard sends us straight to /login instead of
+    // re-showing the splash.
+    state = const AuthState(isInitializing: false);
   }
 }
 
-final authViewModelProvider = ChangeNotifierProvider(
-  (ref) => AuthViewModel(authRepository: ref.read(authRepositoryProvider)),
-);
+final authViewModelProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);

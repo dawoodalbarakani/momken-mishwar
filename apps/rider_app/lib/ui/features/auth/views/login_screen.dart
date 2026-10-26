@@ -40,8 +40,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     setState(() => _requesting = true);
-    final vm = ref.read(authViewModelProvider);
-    final ok = await vm.requestOtp(phone);
+    final ok = await ref.read(authViewModelProvider.notifier).requestOtp(phone);
     setState(() => _requesting = false);
     if (ok && mounted) {
       context.go('/otp?phone=$phone');
@@ -53,43 +52,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = ref.read(authViewModelProvider);
-    return ListenableBuilder(
-      listenable: vm,
-      builder: (context, _) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('تسجيل الدخول')),
-          body: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('أدخل رقم هاتفك اليمني لطلب رمز التحقق'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'رقم الهاتف',
-                    prefixText: '+967 ',
-                    hintText: '771234567',
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _requesting ? null : _requestOtp,
-                    child: _requesting
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('طلب رمز التحقق'),
-                  ),
-                ),
-              ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('تسجيل الدخول')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('أدخل رقم هاتفك اليمني لطلب رمز التحقق'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'رقم الهاتف',
+                prefixText: '+967 ',
+                hintText: '771234567',
+              ),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _requesting ? null : _requestOtp,
+                child: _requesting
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('طلب رمز التحقق'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

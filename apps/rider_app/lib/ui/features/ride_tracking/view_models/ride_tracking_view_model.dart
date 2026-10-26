@@ -1,84 +1,130 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../../../core/app_constants.dart';
 import '../../../../data/repositories/ride_repository.dart';
 
-/// ViewModel for live ride tracking: driver location, vehicle info, WebSocket events.
-class RideTrackingViewModel extends ChangeNotifier {
-  RideTrackingViewModel({
-    required RideRepository rideRepository,
-    required this.rideId,
-  })  : _rideRepository = rideRepository {
-    _restore();
-    _connectWebSocket('');
-  }
+/// Source of raw ride events for a given ride id. Wrapped in a provider so the
+/// live socket can be replaced by a deterministic stream in tests.
+final rideEventSourceProvider = Provider<Stream<dynamic> Function(String rideId)>((ref) {
+  // TODO: send the real session token once the WS auth contract is settled.
+  return (rideId) {
+    final channel = WebSocketChannel.connect(
+      Uri.parse('${AppConstants.wsBaseUrl}/ws/rides/$rideId?token='),
+    );
+    ref.onDispose(() => channel.sink.close());
+    return channel.stream;
+  };
+});
 
-  final RideRepository _rideRepository;
-  final String rideId;
+class RideTrackingState {
+  const RideTrackingState({
+    this.driverName,
+    this.vehiclePlate,
+    this.driverLocation,
+    this.locationAgeSeconds,
+    this.startCode,
+    this.isConnected = false,
+    this.isLoading = true,
+    this.error,
+  });
 
-  String? _driverName;
-  String? get driverName => _driverName;
+  final String? driverName;
+  final String? vehiclePlate;
+  final LatLng? driverLocation;
+  final int? locationAgeSeconds;
+  final String? startCode;
+  final bool isConnected;
+  final bool isLoading;
+  final String? error;
 
-  String? _vehiclePlate;
-  String? get vehiclePlate => _vehiclePlate;
-
-  LatLng? _driverLocation;
-  LatLng? get driverLocation => _driverLocation;
-
-  int? _locationAgeSeconds;
-  int? get locationAgeSeconds => _locationAgeSeconds;
-
-  String? _startCode;
-  String? get startCode => _startCode;
-
-  bool _isConnected = false;
-  bool get isConnected => _isConnected;
-
-  bool _isLoading = true;
-  bool get isLoading => _isLoading;
-
-  String? _error;
-  String? get error => _error;
-
-  WebSocketChannel? _channel;
-  StreamSubscription? _wsSubscription;
-
-  /// Returns true if the driver location is fresh enough to be shown as live.
+  /// True if the driver location is fresh enough to be shown as live.
   bool get isLocationFresh {
-    final age = _locationAgeSeconds;
+    final age = locationAgeSeconds;
     return age != null && age < 30;
   }
 
-  Future<void> _restore() async {
-    try {
-      final ride = await _rideRepository.getRide(rideId);
-      _driverName = ride.driverName;
-      _vehiclePlate = ride.vehiclePlate;
-      _startCode = ride.startCode;
-    } catch (e) {
-      _error = 'فشل استعادة حالة الرحلة';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+  RideTrackingState copyWith({
+    String? driverName,
+    String? vehiclePlate,
+    LatLng? driverLocation,
+    int? locationAgeSeconds,
+    String? startCode,
+    bool? isConnected,
+    bool? isLoading,
+    String? error,
+    bool clearError = false,
+  }) {
+    return RideTrackingState(
+      driverName: driverName ?? this.driverName,
+      vehiclePlate: vehiclePlate ?? this.vehiclePlate,
+      driverLocation: driverLocation ?? this.driverLocation,
+      locationAgeSeconds: locationAgeSeconds ?? this.locationAgeSeconds,
+      startCode: startCode ?? this.startCode,
+      isConnected: isConnected ?? this.isConnected,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+    );
   }
 
-  void _connectWebSocket(String token) {
-    _channel = WebSocketChannel.connect(Uri.parse('${AppConstants.wsBaseUrl}/ws/rides/$rideId?token=$token'));
-    _wsSubscription = _channel!.stream.listen(
+  @override
+  bool operator ==(Object other) =>
+      other is RideTrackingState &&
+      other.driverName == driverName &&
+      other.vehiclePlate == vehiclePlate &&
+      other.driverLocation == driverLocation &&
+      other.locationAgeSeconds == locationAgeSeconds &&
+      other.startCode == startCode &&
+      other.isConnected == isConnected &&
+      other.isLoading == isLoading &&
+      other.error == error;
+
+  @override
+  int get hashCode => Object.hash(driverName, vehiclePlate, driverLocation,
+      locationAgeSeconds, startCode, isConnected, isLoading, error);
+}
+
+/// Notifier for live ride tracking: driver location, vehicle info, socket events.
+class RideTrackingNotifier extends FamilyNotifier<RideTrackingState, String> {
+  /// The family argument (ride id), captured in [build].
+  late final String _rideId;
+
+  @override
+  RideTrackingState build(String rideId) {
+    _rideId = rideId;
+    final subscription = ref.read(rideEventSourceProvider)(rideId).listen(
       (message) {
         // TODO: parse JSON message into a domain event and update state.
         _handleEvent(<String, dynamic>{});
       },
-      onError: (e) => _setConnected(false, error: 'خطأ في اتصال الركوب'),
-      onDone: () => _setConnected(false),
+      onError: (e) =>
+          state = state.copyWith(isConnected: false, error: 'خطأ في اتصال الركوب'),
+      onDone: () => state = state.copyWith(isConnected: false),
     );
-    _setConnected(true);
+    ref.onDispose(subscription.cancel);
+    unawaited(_restore());
+    // The original view model reported connected=true optimistically right
+    // after opening the socket; onError/onDone correct it afterwards.
+    return const RideTrackingState(isConnected: true);
+  }
+
+  RideRepository get _rideRepository => ref.read(rideRepositoryProvider);
+
+  Future<void> _restore() async {
+    try {
+      final ride = await _rideRepository.getRide(_rideId);
+      state = state.copyWith(
+        driverName: ride.driverName,
+        vehiclePlate: ride.vehiclePlate,
+        startCode: ride.startCode,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: 'فشل استعادة حالة الرحلة');
+    }
   }
 
   void _handleEvent(Map<String, dynamic> data) {
@@ -87,31 +133,13 @@ class RideTrackingViewModel extends ChangeNotifier {
 
   Future<bool> cancelRide() async {
     try {
-      await _rideRepository.cancelRide(rideId);
-      return true;
+      return await _rideRepository.cancelRide(_rideId);
     } catch (e) {
       return false;
     }
   }
-
-  void _setConnected(bool connected, {String? error}) {
-    _isConnected = connected;
-    if (error != null) _error = error;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _wsSubscription?.cancel();
-    _channel?.sink.close();
-    super.dispose();
-  }
 }
 
 final rideTrackingViewModelProvider =
-    ChangeNotifierProvider.family<RideTrackingViewModel, String>(
-  (ref, rideId) => RideTrackingViewModel(
-    rideRepository: ref.read(rideRepositoryProvider),
-    rideId: rideId,
-  ),
-);
+    NotifierProvider.family<RideTrackingNotifier, RideTrackingState, String>(
+        RideTrackingNotifier.new);
