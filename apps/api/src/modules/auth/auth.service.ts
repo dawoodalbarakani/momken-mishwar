@@ -97,10 +97,18 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
-  async issueTokens(user: { id: string; phone_e164?: string | null; email?: string | null }): Promise<TokenPair> {
+  /**
+   * `family_id` groups every token descending from one login. Rotation must
+   * reuse it: minting a fresh family per rotation would mean reuse detection
+   * only ever revokes the single replayed token, leaving the tokens issued
+   * after it alive, and a stolen-but-already-used token would stay exploitable.
+   */
+  async issueTokens(
+    user: { id: string; phone_e164?: string | null; email?: string | null },
+    family_id: string = cryptoRandomUuid(),
+  ): Promise<TokenPair> {
     const roles = await this.prisma.user_roles.findMany({ where: { user_id: user.id } });
     const roleList = roles.map((r) => r.role);
-    const family_id = cryptoRandomUuid();
     const accessToken = this.jwt.sign(
       { sub: user.id, phone: user.phone_e164, email: user.email, roles: roleList },
       { expiresIn: '15m' },
@@ -135,7 +143,8 @@ export class AuthService {
       throw new UnauthorizedException('توكن التجديد منتهي الصلاحية', 'Refresh token expired');
     }
 
-    // Rotate: revoke current, issue new family.
+    // Rotate: revoke the presented token and reissue inside the same family, so
+    // a later replay of any ancestor still revokes this token too.
     const rotated_at = new Date();
     const rotation = await this.prisma.refresh_tokens.updateMany({
       where: {
@@ -153,7 +162,7 @@ export class AuthService {
     if (!user || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('المستخدم غير نشط', 'User not active');
     }
-    return this.issueTokens(user);
+    return this.issueTokens(user, token.family_id);
   }
 
   async logout(user_id: string) {

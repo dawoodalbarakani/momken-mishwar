@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../data/services/connectivity_service.dart';
 import '../../../../data/services/map_service.dart';
+import '../../../core/app_theme.dart';
 import '../../../core/map_surface.dart';
 import '../../../core/responsive.dart';
 import '../view_models/home_view_model.dart';
@@ -17,13 +18,46 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  /// Opens Uber-style place search for the tapped endpoint and assigns the
+  /// chosen result to pickup/destination.
+  Future<void> _searchFor(_PickTarget target) async {
+    final place = await showModalBottomSheet<PlaceResult>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _PlaceSearchSheet(target: target),
+    );
+    if (place == null || !mounted) return;
+    final notifier = ref.read(homeViewModelProvider.notifier);
+    if (target == _PickTarget.pickup) {
+      notifier.setPickup(place.latLng);
+    } else {
+      notifier.setDestination(place.latLng);
+    }
+  }
+
+  /// Locates the rider and uses the fix as the pickup point (the Uber default:
+  /// "your current position is where you start").
+  Future<void> _useMyLocation() async {
+    final notifier = ref.read(homeViewModelProvider.notifier);
+    await notifier.locateMe();
+    if (!mounted) return;
+    final latest = ref.read(homeViewModelProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    if (latest.error != null) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(latest.error!),
+        backgroundColor: Colors.red.shade700,
+      ));
+    } else if (latest.currentLocation != null) {
+      notifier.setPickup(latest.currentLocation);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(homeViewModelProvider);
-    final notifier = ref.read(homeViewModelProvider.notifier);
     final isTabletOrLarger = context.deviceSize != DeviceSize.mobile;
     return Scaffold(
-      // SafeArea keeps the floating layers clear of the status/home bars.
       body: SafeArea(
         child: Stack(
           children: [
@@ -35,14 +69,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       markerId: const MarkerId('pickup'),
                       position: state.pickup!,
                       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-                      infoWindow: const InfoWindow(title: 'نقطة الانطلاق'),
                     ),
                   if (state.destination != null)
                     Marker(
                       markerId: const MarkerId('destination'),
                       position: state.destination!,
                       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-                      infoWindow: const InfoWindow(title: 'الوجهة'),
                     ),
                 },
               ),
@@ -61,29 +93,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
-            // On mobile the search card floats over the map full-width; on
-            // tablet/desktop it becomes a fixed-width panel docked to the
-            // leading edge, leaving the rest of the wider canvas visible.
-            if (isTabletOrLarger)
-              Align(
-                alignment: AlignmentDirectional.topStart,
-                child: Padding(
-                  padding: EdgeInsets.only(top: 16, left: 24, right: 24),
-                  child: const _SearchCard(),
-                ),
-              )
-            else
-              Positioned(
-                top: 16,
-                left: 12,
-                right: 12,
-                child: const _SearchCard(),
-              ),
+            // The booking card docks at the bottom (Uber's "Go anywhere"
+            // widget); on wide screens it caps at 480px and stays centred.
             Align(
               alignment: AlignmentDirectional.bottomCenter,
               child: Padding(
-                padding: EdgeInsets.only(bottom: 16, left: 12, right: 12),
-                child: _TripSummaryCard(state: state, notifier: notifier),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTabletOrLarger ? 24 : 12,
+                  vertical: 16,
+                ),
+                child: _BookingCard(
+                  state: state,
+                  onPickupTap: () => _searchFor(_PickTarget.pickup),
+                  onDestinationTap: () => _searchFor(_PickTarget.destination),
+                  onClear: ref.read(homeViewModelProvider.notifier).clearSelection,
+                ),
+              ),
+            ),
+            // Map recenter/locate control, floating opposite the booking
+            // card like Uber's on-map location button. Last in the Stack so
+            // it stays on top of whatever docks at the edges.
+            Align(
+              alignment: AlignmentDirectional.topEnd,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: _RoundMapButton(
+                  icon: Icons.my_location,
+                  tooltip: 'استخدم موقعي كنقطة انطلاق',
+                  busy: state.isLoading,
+                  onPressed: _useMyLocation,
+                ),
               ),
             ),
           ],
@@ -93,36 +132,217 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-/// Which endpoint the search box is currently assigning results to.
+/// Which endpoint the place-search sheet is filling in.
 enum _PickTarget { pickup, destination }
 
-/// Search panel: pick whether you are choosing the pickup or the destination,
-/// search places, and tap a result to assign it. Also exposes "locate me"
-/// with its loading/error states surfaced from [HomeNotifier].
-class _SearchCard extends ConsumerStatefulWidget {
-  const _SearchCard();
+/// Small white circular button used on top of the map surface.
+class _RoundMapButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final bool busy;
+  final VoidCallback? onPressed;
+
+  const _RoundMapButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.busy = false,
+  });
 
   @override
-  ConsumerState<_SearchCard> createState() => _SearchCardState();
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: UberColors.white,
+        shape: const CircleBorder(side: BorderSide.none),
+        elevation: 2,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: busy ? null : onPressed,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: busy
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(icon, color: UberColors.black),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _SearchCardState extends ConsumerState<_SearchCard> {
-  final TextEditingController _queryController = TextEditingController();
-  _PickTarget _target = _PickTarget.pickup;
-  List<PlaceResult>? _results;
+/// Uber-style booking widget: destination/pickup rows plus a prices CTA,
+/// docked at the bottom of the map.
+class _BookingCard extends StatelessWidget {
+  final HomeState state;
+  final VoidCallback onPickupTap;
+  final VoidCallback onDestinationTap;
+  final VoidCallback onClear;
+
+  const _BookingCard({
+    required this.state,
+    required this.onPickupTap,
+    required this.onDestinationTap,
+    required this.onClear,
+  });
+
+  static String _endpointLabel(String fallback, LatLng? point) => point == null
+      ? fallback
+      : '${point.latitude.toStringAsFixed(3)}, ${point.longitude.toStringAsFixed(3)}';
+
+  @override
+  Widget build(BuildContext context) {
+    final hasSelection = state.pickup != null || state.destination != null;
+    // ConstrainedBox (not ContentMaxWidth) here: the card must shrink-wrap
+    // so the outer bottomCentre Align can dock it at the bottom edge.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 480),
+      child: Card(
+        margin: EdgeInsets.zero,
+        // Theme keeps cards flat; floating over the map the booking card
+        // needs a visible shadow separation.
+        elevation: 4,
+        shadowColor: const Color(0x33000000),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'إلى أين تريدين الذهاب؟',
+                      style: Theme.of(context).textTheme.titleLarge,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasSelection)
+                    IconButton(
+                      icon: const Icon(Icons.clear_all, size: 20),
+                      tooltip: 'مسح التحديد',
+                      onPressed: onClear,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              _EndpointTile(
+                color: Colors.green,
+                filled: state.pickup != null,
+                label: _endpointLabel('اختر نقطة الانطلاق', state.pickup),
+                onTap: onPickupTap,
+              ),
+              const SizedBox(height: 8),
+              _EndpointTile(
+                color: UberColors.black,
+                filled: state.destination != null,
+                label: _endpointLabel('الوجهة', state.destination),
+                onTap: onDestinationTap,
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: (state.pickup == null || state.destination == null)
+                    ? null
+                    : () => context.go('/quote'),
+                child: const Text('عرض الأسعار'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One pickup/dropoff row: leading endpoint glyph, label, chevron.
+class _EndpointTile extends StatelessWidget {
+  final Color color;
+  final bool filled;
+  final String label;
+  final VoidCallback onTap;
+
+  const _EndpointTile({
+    required this.color,
+    required this.filled,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: UberColors.chipGray,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            if (filled)
+              Icon(Icons.location_on, size: 20, color: color)
+            else
+              Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: filled ? UberColors.black : UberColors.mutedGray,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down, color: UberColors.bodyGray),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet with autofocus search; an empty query lists every demo place
+/// (recent-places style). Pops with the selected [PlaceResult].
+class _PlaceSearchSheet extends ConsumerStatefulWidget {
+  final _PickTarget target;
+
+  const _PlaceSearchSheet({required this.target});
+
+  @override
+  ConsumerState<_PlaceSearchSheet> createState() => _PlaceSearchSheetState();
+}
+
+class _PlaceSearchSheetState extends ConsumerState<_PlaceSearchSheet> {
+  final TextEditingController _controller = TextEditingController();
+  late List<PlaceResult> _results = const [];
   bool _searching = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Show the full demo place list first, like "recent" suggestions.
+    _runSearch('');
+  }
+
+  @override
   void dispose() {
-    _queryController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _search(String query) async {
-    if (query.trim().isEmpty) {
-      setState(() => _results = null);
-      return;
-    }
+  Future<void> _runSearch(String query) async {
     setState(() => _searching = true);
     final results = await ref.read(homeViewModelProvider.notifier).searchPlaces(query);
     if (!mounted) return;
@@ -132,235 +352,95 @@ class _SearchCardState extends ConsumerState<_SearchCard> {
     });
   }
 
-  void _pick(PlaceResult place) {
-    final notifier = ref.read(homeViewModelProvider.notifier);
-    if (_target == _PickTarget.pickup) {
-      notifier.setPickup(place.latLng);
-    } else {
-      notifier.setDestination(place.latLng);
-    }
-    _queryController.clear();
-    setState(() => _results = null);
-  }
-
-  Future<void> _locateMe() async {
-    final notifier = ref.read(homeViewModelProvider.notifier);
-    await notifier.locateMe();
-    if (!mounted) return;
-    // Ride-hailing convention: a fresh fix becomes the pickup unless the
-    // rider has already chosen one.
-    final current = ref.read(homeViewModelProvider);
-    if (current.currentLocation != null && current.pickup == null) {
-      notifier.setPickup(current.currentLocation);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(homeViewModelProvider);
-    return SizedBox(
-      width: responsiveValue<double>(context, mobile: double.infinity, tablet: 360, desktop: 360),
-      child: Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SegmentedButton<_PickTarget>(
-                segments: const [
-                  ButtonSegment(
-                    value: _PickTarget.pickup,
-                    label: Text('نقطة الانطلاق'),
-                    icon: Icon(Icons.trip_origin),
-                  ),
-                  ButtonSegment(
-                    value: _PickTarget.destination,
-                    label: Text('الوجهة'),
-                    icon: Icon(Icons.place_outlined),
-                  ),
-                ],
-                selected: {_target},
-                showSelectedIcon: false,
-                onSelectionChanged: (selection) => setState(() => _target = selection.first),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _queryController,
-                enabled: !_searching,
-                decoration: InputDecoration(
-                  hintText: _target == _PickTarget.pickup
-                      ? 'ابحث عن حي أو معلم للانطلاق'
-                      : 'ابحث عن حي أو معلم للوجهة',
-                  prefixIcon: _searching
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                        )
-                      : const Icon(Icons.search),
-                  filled: true,
-                  border: InputBorder.none,
-                ),
-                textInputAction: TextInputAction.search,
-                onSubmitted: _search,
-              ),
-              if (_results != null) ..._resultRows(_results!),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
-                icon: state.isLoading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.my_location),
-                label: const Text('تحديد موقعي'),
-                onPressed: state.isLoading ? null : _locateMe,
-              ),
-              if (state.error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 18),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          state.error!,
-                          style: const TextStyle(color: Colors.red, fontSize: 12),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        tooltip: 'إخفاء الخطأ',
-                        onPressed: () =>
-                            ref.read(homeViewModelProvider.notifier).setError(null),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _resultRows(List<PlaceResult> results) {
-    if (results.isEmpty) {
-      return [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Text('لا توجد نتائج مطابقة', textAlign: TextAlign.center),
-        ),
-      ];
-    }
-    return [
-      const SizedBox(height: 4),
-      ...results.take(5).map(
-            (place) => ListTile(
-              dense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              leading: const Icon(Icons.place_outlined),
-              title: Text(place.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text(place.address, maxLines: 1, overflow: TextOverflow.ellipsis),
-              onTap: () => _pick(place),
-            ),
-          ),
-    ];
-  }
-}
-
-class _TripSummaryCard extends StatelessWidget {
-  final HomeState state;
-  final HomeNotifier notifier;
-
-  const _TripSummaryCard({required this.state, required this.notifier});
-
-  static String _coords(LatLng? point) =>
-      point == null ? '' : '${point.latitude.toStringAsFixed(3)}, ${point.longitude.toStringAsFixed(3)}';
-
-  @override
-  Widget build(BuildContext context) {
-    final hasSelection = state.pickup != null || state.destination != null;
-    return ContentMaxWidth(
-      maxWidth: 480,
-      child: Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Chip(
-                      avatar: const Icon(Icons.trip_origin, size: 18),
-                      label: Text(
-                        state.pickup != null
-                            ? 'الانطلاق: ${_coords(state.pickup)}'
-                            : 'اختر نقطة الانطلاق',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      onDeleted: state.pickup != null ? () => notifier.setPickup(null) : null,
+    final hint = widget.target == _PickTarget.pickup
+        ? 'ابحث عن حي أو معلم للانطلاق منه'
+        : 'ابحث عن حي أو معلم للذهاب إليه';
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        child: ConstrainedBox(
+          // Cap the sheet so the map stays visible behind it on tall screens.
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.55),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: UberColors.mutedGray,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Chip(
-                      avatar: const Icon(Icons.place_outlined, size: 18),
-                      label: Text(
-                        state.destination != null
-                            ? 'الوجهة: ${_coords(state.destination)}'
-                            : 'اختر الوجهة',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      onDeleted:
-                          state.destination != null ? () => notifier.setDestination(null) : null,
-                    ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  textInputAction: TextInputAction.search,
+                  onChanged: _runSearch,
+                  decoration: InputDecoration(
+                    hintText: hint,
+                    prefixIcon: _searching
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : const Icon(Icons.search),
+                    suffixIcon: _controller.text.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: 'مسح البحث',
+                            onPressed: () {
+                              _controller.clear();
+                              _runSearch('');
+                            },
+                          ),
                   ),
-                ],
-              ),
-              if (hasSelection) ...[
+                ),
                 const SizedBox(height: 8),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.clear_all, size: 18),
-                    label: const Text('مسح الكل'),
-                    onPressed: notifier.clearSelection,
-                  ),
+                Flexible(
+                  child: _results.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Text('لا توجد نتائج مطابقة', textAlign: TextAlign.center),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _results.length,
+                          itemBuilder: (_, i) {
+                            final place = _results[i];
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              leading: const Icon(Icons.place_outlined),
+                              title: Text(place.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              subtitle: Text(
+                                place.address,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, color: UberColors.bodyGray),
+                              ),
+                              onTap: () => Navigator.of(context).pop(place),
+                            );
+                          },
+                        ),
                 ),
               ],
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: (state.pickup == null || state.destination == null)
-                    ? null
-                    : () => context.go('/quote'),
-                child: const Text('احسب الأجرة'),
-              ),
-              if (!hasSelection)
-                const Padding(
-                  padding: EdgeInsets.only(top: 6),
-                  child: Text(
-                    'ابحث عن نقطة الانطلاق والوجهة لبدء الرحلة',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-

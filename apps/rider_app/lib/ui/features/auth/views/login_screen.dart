@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../core/app_constants.dart';
+import '../../../../../core/demo_mode.dart';
+import '../../../../../data/mock/demo_data.dart';
 import '../../../core/responsive.dart';
 import '../view_models/auth_view_model.dart';
 
@@ -16,6 +18,17 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _phoneController = TextEditingController();
   bool _requesting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Demo mode: prefill the demo phone so testers go straight to the OTP
+    // step without typing.
+    if (ref.read(demoModeProvider)) {
+      _phoneController.text =
+          DemoData.demoPhone.substring(AppConstants.yemenCountryCode.length);
+    }
+  }
 
   @override
   void dispose() {
@@ -73,6 +86,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   hintText: '771234567',
                 ),
               ),
+              if (ref.watch(demoModeProvider)) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'وضع العرض التجريبي: رقم الهاتف ورمز التحقق معبّآن تلقائياً',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ],
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _requesting ? null : _requestOtp,

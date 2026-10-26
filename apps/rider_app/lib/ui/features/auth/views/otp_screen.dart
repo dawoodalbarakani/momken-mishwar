@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../core/app_constants.dart';
+import '../../../../../core/demo_mode.dart';
+import '../../../../../data/mock/demo_data.dart';
 import '../../../core/responsive.dart';
 import '../view_models/auth_view_model.dart';
 
@@ -35,6 +37,13 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   void initState() {
     super.initState();
     _startResendTimer();
+    // Demo mode: prefill the demo OTP so the verify step needs no typing.
+    if (ref.read(demoModeProvider)) {
+      final digits = DemoData.demoOtp.split('');
+      for (var i = 0; i < _controllers.length && i < digits.length; i++) {
+        _controllers[i].text = digits[i];
+      }
+    }
   }
 
   void _startResendTimer() {
@@ -96,6 +105,14 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('أدخل الرمز المكون من ${AppConstants.otpLength} أرقام المرسل إلى ${widget.phone}'),
+              if (ref.watch(demoModeProvider)) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'وضع العرض التجريبي: الرمز ${DemoData.demoOtp} معبأ مسبقاً',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ],
               const SizedBox(height: 24),
               // Cell width is derived from the available width instead of a
               // fixed 48px, so the row never overflows a narrow viewport and

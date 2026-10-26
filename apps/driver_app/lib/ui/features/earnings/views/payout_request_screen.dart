@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/app_theme.dart';
 import '../../../core/responsive.dart';
 import '../view_models/earnings_view_model.dart';
 
@@ -43,31 +44,44 @@ class _PayoutRequestScreenState extends ConsumerState<PayoutRequestScreen> {
   Widget build(BuildContext context) {
     final vm = ref.watch(earningsViewModelProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('طلب تسوية / نزاع مالي')),
+      appBar: AppBar(title: const Text('طلب تسوية')),
       body: Padding(
         padding: context.responsivePadding,
         child: ContentMaxWidth(
           maxWidth: 560,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: ListView(
             children: [
-              const Text('اطلب مراجعة مبلغ أو تسجيل نزاع مالي على مستحقاتك.'),
-              const SizedBox(height: 16),
-              Text('صافي المستحقات المتاح: ${vm.netPayable.toStringAsFixed(0)} ريال', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 24),
+              const Text(
+                'المتاح للسحب',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: UberColors.bodyGray),
+              ),
+              const SizedBox(height: UberSpacing.xs),
+              Text(
+                '${vm.netPayable.toStringAsFixed(0)} ريال',
+                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.15, color: UberColors.black),
+              ),
+              const SizedBox(height: UberSpacing.md),
+              Text(
+                'اطلب مراجعة مبلغ أو سجّل نزاعاً مالياً على مستحقاتك، وسيراجعه فريق العمليات.',
+                style: UberTypography.caption,
+              ),
+              const SizedBox(height: UberSpacing.xl),
               TextField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'المبلغ المطلوب (ريال)', hintText: 'أدخل المبلغ'),
+                decoration: const InputDecoration(
+                  labelText: 'المبلغ المطلوب (ريال)',
+                  hintText: 'أدخل المبلغ',
+                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: UberSpacing.xl),
               ElevatedButton(
                 onPressed: _submitting ? null : _request,
                 child: _submitting
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: UberColors.white))
                     : const Text('إرسال الطلب'),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: UberSpacing.md),
               TextButton(onPressed: () => context.go('/earnings'), child: const Text('العودة')),
             ],
           ),

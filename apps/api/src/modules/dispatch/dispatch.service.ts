@@ -8,6 +8,9 @@ const queryRaw = <T>(tx: any) =>
   (strings: TemplateStringsArray, ...values: any[]): Promise<T> =>
     tx.$queryRaw(strings, ...values) as Promise<T>;
 
+/** Upper bound on rides transitioned per sweep, to keep the transaction short. */
+const SEARCH_EXPIRY_BATCH = 500;
+
 @Injectable()
 export class DispatchService {
   constructor(private prisma: PrismaService) {}
@@ -195,16 +198,67 @@ export class DispatchService {
     });
   }
 
+  /**
+   * Expire timed-out offers and searches.
+   *
+   * Driven by [DispatchSweeperService] on an interval; also exposed to staff as
+   * `POST /dispatch/sweep` for manual recovery. Must stay idempotent and behave
+   * under concurrency, because every API replica runs its own sweeper.
+   */
   async sweep() {
     const now = new Date();
-    await this.prisma.ride_offers.updateMany({
+
+    // Offer expiry changes no ride state, so one conditional update suffices and
+    // a replica that loses the race simply matches zero rows.
+    const { count: expiredOffers } = await this.prisma.ride_offers.updateMany({
       where: { status: 'PENDING', expires_at: { lt: now } },
       data: { status: 'EXPIRED', responded_at: now },
     });
-    await this.prisma.rides.updateMany({
-      where: { status: 'SEARCHING', search_expires_at: { lt: now } },
-      data: { status: 'NO_DRIVER_FOUND' },
+
+    // Search expiry goes through the domain state machine and leaves an audit
+    // row. A bare `updateMany` would flip the ride to NO_DRIVER_FOUND with no
+    // ride_events record, so neither the audit trail nor the rider's client
+    // would ever learn that the search had ended.
+    const searchesExpired = await this.prisma.tx(async (tx) => {
+      const expired = await queryRaw<
+        Array<{ id: string; customer_id: string; driver_id: string | null }>
+      >(tx)`
+        SELECT id, customer_id, driver_id
+        FROM rides
+        WHERE status = 'SEARCHING' AND search_expires_at < ${now}
+        ORDER BY search_expires_at
+        LIMIT ${SEARCH_EXPIRY_BATCH}
+        FOR UPDATE SKIP LOCKED`;
+
+      let applied = 0;
+      for (const ride of expired) {
+        const result = transition(
+          { status: 'SEARCHING', customer_id: ride.customer_id, driver_id: ride.driver_id },
+          'SEARCH_EXPIRED',
+          { role: 'SYSTEM' },
+        );
+
+        const updated = await queryRaw<Array<{ id: string }>>(tx)`
+          UPDATE rides SET status = ${result.to}
+          WHERE id = ${ride.id} AND status = 'SEARCHING'
+          RETURNING id`;
+        if (updated.length === 0) continue;
+
+        await tx.ride_events.create({
+          data: {
+            ride_id: ride.id,
+            event_type: 'SEARCH_EXPIRED',
+            from_status: 'SEARCHING',
+            to_status: result.to,
+            actor_role: 'SYSTEM',
+            payload: {},
+          },
+        });
+        applied += 1;
+      }
+      return applied;
     });
-    return { ok: true };
+
+    return { ok: true, expiredOffers, searchesExpired };
   }
 }

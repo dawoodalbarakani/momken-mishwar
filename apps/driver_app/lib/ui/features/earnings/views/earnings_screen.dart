@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../domain/models/earnings.dart';
+import '../../../core/app_theme.dart';
 import '../../../core/responsive.dart';
+import '../../../core/uber_components.dart';
 import '../view_models/earnings_view_model.dart';
 
 class EarningsScreen extends ConsumerWidget {
@@ -13,9 +15,7 @@ class EarningsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(earningsViewModelProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('الأرباح'), actions: [
-        IconButton(icon: const Icon(Icons.request_quote_outlined), onPressed: () => context.go('/earnings/payout-request')),
-      ]),
+      appBar: AppBar(title: const Text('الأرباح')),
       body: Padding(
         padding: context.responsivePadding,
         child: ContentMaxWidth(
@@ -23,61 +23,106 @@ class EarningsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _row('إجمالي الأجرة', '${vm.totalFare.toStringAsFixed(0)} ريال'),
-                      _row('عمولة المنصة', '-${vm.platformCommission.toStringAsFixed(0)} ريال'),
-                      _row('صافي مستحقات السائق', '${vm.netPayable.toStringAsFixed(0)} ريال', isHighlight: true),
-                      _row('النقد المحصل', '${vm.cashCollected.toStringAsFixed(0)} ريال'),
-                      _row('مستحقات المنصة', '-${vm.platformReceivables.toStringAsFixed(0)} ريال'),
-                    ],
-                  ),
+              _PayoutHero(
+                netPayable: vm.netPayable,
+                onRequestPayout: () => context.go('/earnings/payout-request'),
+              ),
+              const SizedBox(height: UberSpacing.lg),
+              UberCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    UberMetricRow(label: 'إجمالي الأجرة', value: '${vm.totalFare.toStringAsFixed(0)} ريال'),
+                    UberMetricRow(label: 'عمولة المنصة', value: '-${vm.platformCommission.toStringAsFixed(0)} ريال'),
+                    UberMetricRow(label: 'النقد المحصل', value: '${vm.cashCollected.toStringAsFixed(0)} ريال'),
+                    UberMetricRow(
+                      label: 'مستحقات المنصة',
+                      value: '-${vm.platformReceivables.toStringAsFixed(0)} ريال',
+                      divided: true,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                'سجل الرحلات المكتملة',
-                style: TextStyle(fontSize: fluidFontSize(context, min: 16, max: 20), fontWeight: FontWeight.bold),
+              const SizedBox(height: UberSpacing.xl),
+              UberSectionHeader(
+                title: 'سجل الرحلات المكتملة',
+                action: vm.completedRides.isEmpty
+                    ? null
+                    : UberStatusPill(label: '${vm.completedRides.length} رحلة'),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: UberSpacing.md),
               Expanded(
                 child: vm.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : vm.completedRides.isEmpty
-                    ? const Center(child: Text('لا توجد رحلات مكتملة'))
+                    ? const UberEmptyState(
+                        icon: Icons.receipt_long_outlined,
+                        title: 'لا توجد رحلات مكتملة',
+                        message: 'ستظهر هنا كل رحلة تُنهيها مع صافي أرباحها.',
+                      )
                     : RefreshIndicator(
                         onRefresh: () async => ref.read(earningsViewModelProvider.notifier).fetchEarnings(),
                         child: _CompletedRidesGrid(rides: vm.completedRides),
                       ),
               ),
-              if (vm.error != null) Text(vm.error!, style: const TextStyle(color: Colors.red)),
+              UberErrorText(vm.error),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _row(String label, String value, {bool isHighlight = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+/// The payout figure is the screen's headline, so it gets the inverted surface
+/// and the largest type in the app's body content.
+class _PayoutHero extends StatelessWidget {
+  final double netPayable;
+  final VoidCallback onRequestPayout;
+
+  const _PayoutHero({required this.netPayable, required this.onRequestPayout});
+
+  @override
+  Widget build(BuildContext context) {
+    return UberCard(
+      inverted: true,
+      padding: const EdgeInsets.all(UberSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal, color: isHighlight ? Colors.green : null),
-            ),
+          const Text(
+            'صافي مستحقاتك',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: UberColors.mutedGray),
           ),
-          const SizedBox(width: 8),
-          Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: isHighlight ? Colors.green : null)),
+          const SizedBox(height: UberSpacing.xs),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Flexible(
+                child: Text(
+                  netPayable.toStringAsFixed(0),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w700, height: 1.15, color: UberColors.white),
+                ),
+              ),
+              const SizedBox(width: UberSpacing.sm),
+              const Text(
+                'ريال يمني',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: UberColors.mutedGray),
+              ),
+            ],
+          ),
+          const SizedBox(height: UberSpacing.lg),
+          ElevatedButton(
+            onPressed: onRequestPayout,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: UberColors.white,
+              foregroundColor: UberColors.black,
+            ),
+            child: const Text('طلب تسوية'),
+          ),
         ],
       ),
     );
@@ -97,42 +142,54 @@ class _CompletedRidesGrid extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: columns,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 2.6,
+        mainAxisSpacing: UberSpacing.sm,
+        crossAxisSpacing: UberSpacing.sm,
+        mainAxisExtent: 84,
       ),
       itemCount: rides.length,
       itemBuilder: (context, i) {
         final r = rides[i];
-        return Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('الرحلة ${r.rideId}', maxLines: 1, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 4),
-                      Text('تم الإكمال في ${r.completedAt.toLocal().toString().substring(0, 16)}',
-                          style: const TextStyle(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
+        return UberCard(
+          padding: const EdgeInsets.symmetric(horizontal: UberSpacing.lg, vertical: UberSpacing.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${r.netToDriver.toStringAsFixed(0)} ريال', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text('عمولة ${r.platformCommission.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text(
+                      'الرحلة ${r.rideId}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: UberColors.black),
+                    ),
+                    const SizedBox(height: UberSpacing.xxs),
+                    Text(
+                      'اكتملت ${r.completedAt.toLocal().toString().substring(0, 16)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: UberTypography.micro,
+                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: UberSpacing.md),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${r.netToDriver.toStringAsFixed(0)} ريال',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, height: 1.2, color: UberColors.black),
+                  ),
+                  Text(
+                    'عمولة ${r.platformCommission.toStringAsFixed(0)}',
+                    style: UberTypography.micro,
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },

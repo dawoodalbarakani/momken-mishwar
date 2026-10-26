@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../core/demo_mode.dart';
 import '../../domain/models/available_ride.dart';
 import '../../domain/models/auth_user.dart';
 import '../../domain/models/document.dart';
@@ -302,6 +303,7 @@ class DemoConnectivityService implements ConnectivityService {
 /// Use with `ProviderScope(overrides: demoOverrides, ...)` (see main_demo.dart)
 /// or build a `ProviderContainer` with them in tests.
 List<Override> get demoOverrides => [
+      demoModeProvider.overrideWithValue(true),
       authRepositoryProvider.overrideWithValue(DemoAuthRepository()),
       rideRepositoryProvider.overrideWithValue(DemoRideRepository()),
       offersRepositoryProvider.overrideWithValue(DemoOffersRepository()),
