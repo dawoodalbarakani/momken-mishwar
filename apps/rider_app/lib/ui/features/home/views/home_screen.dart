@@ -44,10 +44,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final latest = ref.read(homeViewModelProvider);
     final messenger = ScaffoldMessenger.of(context);
     if (latest.error != null) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(latest.error!),
-        backgroundColor: Colors.red.shade700,
-      ));
+      // Theme SnackBar is the Uber black pill; no colored chrome.
+      messenger.showSnackBar(SnackBar(content: Text(latest.error!)));
     } else if (latest.currentLocation != null) {
       notifier.setPickup(latest.currentLocation);
     }
@@ -86,10 +84,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 right: 8,
                 child: Card(
                   margin: EdgeInsets.zero,
-                  color: Colors.amber,
+                  // Chip Gray keeps the offline banner inside the black/white
+                  // palette; black text carries the message.
+                  color: UberColors.chipGray,
                   child: const Padding(
                     padding: EdgeInsets.all(8),
-                    child: Text('لا يوجد اتصال بالإنترنت', textAlign: TextAlign.center),
+                    child: Text(
+                      'لا يوجد اتصال بالإنترنت',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: UberColors.black),
+                    ),
                   ),
                 ),
               ),

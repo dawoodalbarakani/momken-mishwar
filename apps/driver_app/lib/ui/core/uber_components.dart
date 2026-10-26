@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
@@ -318,6 +321,145 @@ class UberEmptyState extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Time-boxed request countdown — the most urgent signal on a trip request.
+///
+/// The ring drains over the window the driver actually sees (captured when the
+/// card mounts), so it never needs an invented "total" from the server. It
+/// steps down once a second rather than running an animation controller, so it
+/// stays a discrete indicator instead of an always-on frame loop.
+class UberCountdownRing extends StatefulWidget {
+  final DateTime expiresAt;
+  final double size;
+
+  const UberCountdownRing({required this.expiresAt, this.size = 48, super.key});
+
+  @override
+  State<UberCountdownRing> createState() => _UberCountdownRingState();
+}
+
+class _UberCountdownRingState extends State<UberCountdownRing> {
+  Timer? _ticker;
+  late int _total;
+  late int _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _reset();
+  }
+
+  @override
+  void didUpdateWidget(UberCountdownRing oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.expiresAt != widget.expiresAt) _reset();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  int _secondsLeft() {
+    final delta = widget.expiresAt.difference(DateTime.now());
+    return delta.isNegative ? 0 : delta.inSeconds;
+  }
+
+  void _reset() {
+    _remaining = _secondsLeft();
+    _total = max(_remaining, 1);
+    _ticker?.cancel();
+    if (_remaining <= 0) return;
+    _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final remaining = _secondsLeft();
+      setState(() => _remaining = remaining);
+      if (remaining <= 0) timer.cancel();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The final fifth of the window is the "decide now" stretch.
+    final urgent = _remaining <= max(10, (_total * 0.2).round());
+    final color = urgent ? UberColors.danger : UberColors.black;
+    return Semantics(
+      label: 'ينتهي العرض خلال $_remaining ثانية',
+      child: SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox.expand(
+              child: CircularProgressIndicator(
+                value: (_remaining / _total).clamp(0.0, 1.0),
+                strokeWidth: 3,
+                strokeCap: StrokeCap.round,
+                backgroundColor: UberColors.hairline,
+                color: color,
+              ),
+            ),
+            Text(
+              _format(_remaining),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Seconds under a minute, `m:ss` above it — a raw `300` reads as noise.
+  String _format(int seconds) {
+    if (seconds < 60) return '$seconds';
+    final minutes = seconds ~/ 60;
+    final rest = seconds % 60;
+    return '$minutes:${rest.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Pinned bottom action surface: white, one hairline on top, safe-area aware.
+///
+/// Uber's focused screens keep the single primary action in thumb reach at the
+/// bottom instead of letting it scroll away with the content.
+class UberActionBar extends StatelessWidget {
+  final Widget child;
+  final double maxWidth;
+
+  const UberActionBar({required this.child, this.maxWidth = 720, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: UberColors.white,
+        border: Border(top: BorderSide(color: UberColors.hairline, width: 1)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: UberSpacing.lg, vertical: UberSpacing.md),
+          // A plain Align with `heightFactor: 1` centres the content on wide
+          // viewports without expanding to fill a bounded height — which is what
+          // ContentMaxWidth's top-anchored Align would do here.
+          child: Align(
+            heightFactor: 1,
+            alignment: AlignmentDirectional.bottomCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: child,
+            ),
+          ),
         ),
       ),
     );

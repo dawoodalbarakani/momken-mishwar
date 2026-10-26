@@ -122,4 +122,36 @@ void main() {
       expect(state().error, isNull);
     });
   });
+
+  group('product tiers', () {
+    Future<void> loadQuote() async {
+      when(repo.fetchQuote(pickup: anyNamed('pickup'), destination: anyNamed('destination')))
+          .thenAnswer((_) async => dummyQuote); // estimatedAmount '1500'
+      await notifier().fetchQuote(pickup: 'p', destination: 'd');
+    }
+
+    test('lands on the default tier with a price equal to the base estimate', () async {
+      await loadQuote();
+      expect(state().selectedTierId, kDefaultTierId);
+      expect(state().selectedOption?.id, kDefaultTierId);
+      // mishwar multiplier is 1.0, so the shown price equals the server quote.
+      expect(state().selectedPrice, 1500);
+    });
+
+    test('selecting a tier rescales the displayed price', () async {
+      await loadQuote();
+      notifier().selectTier('xl'); // multiplier 1.6
+      expect(state().selectedTierId, 'xl');
+      expect(state().selectedPrice, 2400);
+
+      notifier().selectTier('economy'); // multiplier 0.85
+      expect(state().selectedPrice, 1275);
+    });
+
+    test('unknown tier ids are ignored', () async {
+      await loadQuote();
+      notifier().selectTier('does-not-exist');
+      expect(state().selectedTierId, kDefaultTierId);
+    });
+  });
 }

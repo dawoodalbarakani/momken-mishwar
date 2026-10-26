@@ -7,6 +7,7 @@ import '../../../../domain/models/available_ride.dart';
 import '../../../core/app_theme.dart';
 import '../../../core/responsive.dart';
 import '../../../core/uber_components.dart';
+import '../../offers/view_models/offers_view_model.dart';
 import '../view_models/home_view_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -30,6 +31,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final vm = ref.watch(homeViewModelProvider);
     final online = vm.availability == AvailabilityStatus.online;
+    // A trip in progress outranks availability: Uber keeps the driver on that
+    // trip and refuses to let them drift offline mid-ride.
+    final activeRideId = ref.watch(offersViewModelProvider.select((s) => s.activeRideId));
+    final hasActiveRide = activeRideId != null && activeRideId.isNotEmpty;
     return Scaffold(
       appBar: AppBar(title: const Text('الرئيسية')),
       body: Padding(
@@ -39,9 +44,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (hasActiveRide) ...[
+                _ActiveRideStrip(onResume: () => context.go('/ride-track/$activeRideId')),
+                const SizedBox(height: UberSpacing.md),
+              ],
               _AvailabilityCard(
                 online: online,
                 isLoading: vm.isLoading,
+                blocked: hasActiveRide,
                 lastLocationUpdate: vm.lastLocationUpdate,
                 connectionStatus: vm.connectionStatus,
                 error: vm.error,
@@ -50,9 +60,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: UberSpacing.xl),
               UberSectionHeader(
                 title: 'الرحلات المتاحة',
-                action: vm.availableRides.isEmpty
-                    ? null
-                    : UberStatusPill(label: '${vm.availableRides.length} رحلة'),
+                action: UberPill(
+                  label: 'تحديث',
+                  icon: Icons.refresh,
+                  onPressed: vm.isLoading
+                      ? null
+                      : () => ref.read(homeViewModelProvider.notifier).fetchAvailableRides(),
+                ),
               ),
               const SizedBox(height: UberSpacing.md),
               Expanded(
@@ -77,12 +91,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+/// Continuity strip for the trip already in progress. It sits above the
+/// availability panel because, in the real app, the trip the driver is on is
+/// always the first thing on screen.
+class _ActiveRideStrip extends StatelessWidget {
+  final VoidCallback onResume;
+
+  const _ActiveRideStrip({required this.onResume});
+
+  @override
+  Widget build(BuildContext context) {
+    return UberCard(
+      inverted: true,
+      elevated: false,
+      padding: const EdgeInsets.all(UberSpacing.lg),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'رحلة نشطة',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: UberColors.white),
+                ),
+                SizedBox(height: UberSpacing.xxs),
+                Text(
+                  'أكمل الرحلة الحالية قبل استقبال طلبات جديدة.',
+                  style: TextStyle(fontSize: 12, height: 1.43, color: UberColors.mutedGray),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: UberSpacing.md),
+          ElevatedButton(
+            onPressed: onResume,
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(0, 44),
+              backgroundColor: UberColors.white,
+              foregroundColor: UberColors.black,
+            ),
+            child: const Text('متابعة'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Inverted hero panel: the driver's current availability is the single most
 /// important fact on this screen, so it gets the system's strongest surface
 /// (Uber Black) and the largest type.
 class _AvailabilityCard extends StatelessWidget {
   final bool online;
   final bool isLoading;
+
+  /// True while a trip is running: the driver can't go offline mid-ride.
+  final bool blocked;
   final DateTime? lastLocationUpdate;
   final ConnectionStatus connectionStatus;
   final String? error;
@@ -93,6 +158,7 @@ class _AvailabilityCard extends StatelessWidget {
     required this.isLoading,
     required this.connectionStatus,
     required this.onToggle,
+    this.blocked = false,
     this.lastLocationUpdate,
     this.error,
   });
@@ -129,7 +195,11 @@ class _AvailabilityCard extends StatelessWidget {
           ),
           const SizedBox(height: UberSpacing.sm),
           Text(
-            online ? 'أنت تستقبل طلبات الرحلات الآن.' : 'لن تصلك طلبات جديدة حتى تتصل.',
+            blocked
+                ? 'لا يمكن تغيير حالة العمل أثناء رحلة نشطة.'
+                : online
+                ? 'أنت تستقبل طلبات الرحلات الآن.'
+                : 'لن تصلك طلبات جديدة حتى تتصل.',
             style: const TextStyle(fontSize: 14, height: 1.43, color: UberColors.mutedGray),
           ),
           if (lastLocationUpdate != null) ...[
@@ -172,7 +242,7 @@ class _AvailabilityCard extends StatelessWidget {
           const SizedBox(height: UberSpacing.lg),
           // White pill on black: the system's secondary button on a dark surface.
           ElevatedButton(
-            onPressed: isLoading ? null : onToggle,
+            onPressed: (isLoading || blocked) ? null : onToggle,
             style: ElevatedButton.styleFrom(
               backgroundColor: UberColors.white,
               foregroundColor: UberColors.black,

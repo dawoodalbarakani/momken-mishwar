@@ -140,7 +140,8 @@ ThemeData appTheme() => ThemeData(
   snackBarTheme: SnackBarThemeData(
     backgroundColor: UberColors.black,
     contentTextStyle: const TextStyle(color: UberColors.white, fontSize: 14),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    // Toasts join the full-pill language of every other control.
+    shape: const StadiumBorder(),
     behavior: SnackBarBehavior.floating,
   ),
   dialogTheme: DialogThemeData(

@@ -40,7 +40,12 @@ class RideRequestScreen extends ConsumerWidget {
               ),
               if (state.error != null) ...[
                 const SizedBox(height: 16),
-                Text(state.error!, style: const TextStyle(color: Colors.red)),
+                // Theme error token instead of raw red, keeping the palette
+                // consistent with the input error border.
+                Text(
+                  state.error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ],
             ],
           ),

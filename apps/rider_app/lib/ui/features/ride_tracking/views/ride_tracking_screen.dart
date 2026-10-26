@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/app_theme.dart';
 import '../../../core/map_surface.dart';
 import '../../../core/responsive.dart';
 import '../view_models/ride_tracking_view_model.dart';
@@ -40,15 +41,33 @@ class RideTrackingScreen extends ConsumerWidget {
                   Row(
                     children: [
                       const Flexible(child: Text('عمر البيانات: ')),
-                      Text(state.isLocationFresh ? 'مباشر' : 'قديم/غير موثوق', style: TextStyle(color: state.isLocationFresh ? Colors.green : Colors.orange)),
+                      // Monochrome state language: black = live, muted gray = stale.
+                      Text(
+                        state.isLocationFresh ? 'مباشر' : 'قديم/غير موثوق',
+                        style: TextStyle(
+                          color: state.isLocationFresh
+                              ? UberColors.black
+                              : UberColors.mutedGray,
+                          fontWeight: state.isLocationFresh
+                              ? FontWeight.w500
+                              : FontWeight.w400,
+                        ),
+                      ),
                     ],
                   ),
                   if (state.startCode != null) ...[
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.all(8),
-                      color: Colors.blue.shade50,
-                      child: Text('رمز بدء الرحلة: ${state.startCode}', textAlign: TextAlign.center),
+                      decoration: BoxDecoration(
+                        color: UberColors.chipGray,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'رمز بدء الرحلة: ${state.startCode}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: UberColors.black),
+                      ),
                     ),
                   ],
                   const SizedBox(height: 16),
