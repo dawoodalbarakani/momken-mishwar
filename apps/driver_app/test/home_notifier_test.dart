@@ -7,9 +7,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
-class MockRideRepository extends Mock implements RideRepository {}
+// Hand-written, generated-style override (nullable named param) so mockito's
+// `anyNamed` matcher is valid at a non-nullable call site.
+class MockRideRepository extends Mock implements RideRepository {
+  @override
+  Future<List<AvailableRide>> fetchAvailableRides() => (super.noSuchMethod(
+        Invocation.method(#fetchAvailableRides, []),
+        returnValue: Future<List<AvailableRide>>.value(const <AvailableRide>[]),
+      ) as Future<List<AvailableRide>>);
 
-class MockConnectivityService extends Mock implements ConnectivityService {}
+  @override
+  Future<bool> toggleAvailability({bool? available}) => (super.noSuchMethod(
+        Invocation.method(#toggleAvailability, [], {#available: available}),
+        returnValue: Future<bool>.value(false),
+      ) as Future<bool>);
+}
+
+class MockConnectivityService extends Mock implements ConnectivityService {
+  @override
+  Stream<ConnectionStatus> watch() => (super.noSuchMethod(
+        Invocation.method(#watch, []),
+        returnValue: Stream<ConnectionStatus>.empty(),
+      ) as Stream<ConnectionStatus>);
+}
 
 void main() {
   late MockRideRepository rideRepo;
@@ -41,7 +61,7 @@ void main() {
   });
 
   test('toggleAvailability goes online on success', () async {
-    when(rideRepo.toggleAvailability(available: any))
+    when(rideRepo.toggleAvailability(available: anyNamed('available')))
         .thenAnswer((_) async => true);
 
     final ok = await container
@@ -55,7 +75,7 @@ void main() {
   });
 
   test('toggleAvailability failure keeps status and records error', () async {
-    when(rideRepo.toggleAvailability(available: any))
+    when(rideRepo.toggleAvailability(available: anyNamed('available')))
         .thenThrow(Exception('network'));
 
     final ok = await container

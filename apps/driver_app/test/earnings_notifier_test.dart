@@ -6,7 +6,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
-class MockEarningsRepository extends Mock implements EarningsRepository {}
+// Hand-written, generated-style override (nullable param) so mockito's `any`
+// matcher is valid at a non-nullable call site.
+class MockEarningsRepository extends Mock implements EarningsRepository {
+  @override
+  Future<EarningsState> fetchEarnings() => (super.noSuchMethod(
+        Invocation.method(#fetchEarnings, []),
+        returnValue: Future<EarningsState>.value(const EarningsState()),
+      ) as Future<EarningsState>);
+
+  @override
+  Future<bool> requestPayout(double? amount) => (super.noSuchMethod(
+        Invocation.method(#requestPayout, [amount]),
+        returnValue: Future<bool>.value(false),
+      ) as Future<bool>);
+}
 
 void main() {
   late MockEarningsRepository repo;

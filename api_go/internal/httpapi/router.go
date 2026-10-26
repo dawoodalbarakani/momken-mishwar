@@ -8,22 +8,49 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/barakanid96/momken-mishwar/api_go/internal/modules/identity/domain"
+	"github.com/barakanid96/momken-mishwar/api_go/internal/modules/identity/service"
 )
 
+// UserFinder retrieves user records for authenticated requests.
+type UserFinder interface {
+	FindByID(ctx context.Context, id string) (domain.User, error)
+}
+
+// RouterConfig contains services and adapters wired into the HTTP router.
+type RouterConfig struct {
+	Auth   *AuthHandlers
+	Tokens *service.AccessTokenService
+	Users  UserFinder
+}
+
+// API provides HTTP request handlers for health checks and service metadata.
 type API struct {
 	logger *slog.Logger
 	db     *pgxpool.Pool
+	users  UserFinder
 }
 
+// New creates an HTTP handler with standard middleware and unauthenticated endpoints.
 func New(logger *slog.Logger, db *pgxpool.Pool) http.Handler {
-	return NewWithAuth(logger, db, nil)
+	return NewWithConfig(logger, db, RouterConfig{})
 }
 
+// NewWithAuth creates an HTTP handler with registered authentication endpoints.
 func NewWithAuth(logger *slog.Logger, db *pgxpool.Pool, auth *AuthHandlers) http.Handler {
-	api := &API{logger: logger, db: db}
+	return NewWithConfig(logger, db, RouterConfig{Auth: auth})
+}
+
+// NewWithConfig creates an HTTP handler with full service dependencies and token validation.
+func NewWithConfig(logger *slog.Logger, db *pgxpool.Pool, cfg RouterConfig) http.Handler {
+	api := &API{logger: logger, db: db, users: cfg.Users}
 	mux := http.NewServeMux()
-	if auth != nil {
-		auth.Register(mux)
+	if cfg.Auth != nil {
+		cfg.Auth.Register(mux)
+	}
+	if cfg.Tokens != nil {
+		mux.Handle("GET /api/v1/auth/me", RequireAccessToken(cfg.Tokens, http.HandlerFunc(api.me)))
 	}
 	mux.HandleFunc("GET /health/live", api.live)
 	mux.HandleFunc("GET /health/ready", api.ready)
@@ -51,6 +78,32 @@ func (a *API) index(w http.ResponseWriter, r *http.Request) {
 		"version": "v1",
 		"status":  "scaffold",
 		"message": "Business endpoints are being ported incrementally; existing API remains the contract source of truth.",
+	})
+}
+
+func (a *API) me(w http.ResponseWriter, r *http.Request) {
+	claims, ok := AccessTokenClaimsFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	if a.users != nil {
+		user, err := a.users.FindByID(r.Context(), claims.Subject)
+		if err == nil {
+			writeJSON(w, http.StatusOK, map[string]any{
+				"id":           user.ID,
+				"phone_e164":   user.PhoneE164,
+				"display_name": user.DisplayName,
+				"locale":       user.Locale,
+				"status":       user.Status,
+				"roles":        user.Roles,
+			})
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id":    claims.Subject,
+		"roles": claims.Roles,
 	})
 }
 

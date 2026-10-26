@@ -72,8 +72,12 @@ class RideTrackingState {
 }
 
 class RideTrackingNotifier extends FamilyNotifier<RideTrackingState, String> {
+  /// The family argument (ride id), captured in [build].
+  late final String _rideId;
+
   @override
-  RideTrackingState build() {
+  RideTrackingState build(String rideId) {
+    _rideId = rideId;
     // First state write happens after an await, so this is safe to fire here.
     _restore();
     return const RideTrackingState();
@@ -83,7 +87,7 @@ class RideTrackingNotifier extends FamilyNotifier<RideTrackingState, String> {
 
   Future<void> _restore() async {
     try {
-      final ride = await _rideRepository.getRide(args);
+      final ride = await _rideRepository.getRide(_rideId);
       state = state.copyWith(
         status: ride.status,
         pickup: ride.pickup,
@@ -101,7 +105,7 @@ class RideTrackingNotifier extends FamilyNotifier<RideTrackingState, String> {
 
   Future<bool> verifyAssignment() async {
     try {
-      final ok = await _rideRepository.verifyAssignment(args);
+      final ok = await _rideRepository.verifyAssignment(_rideId);
       state = state.copyWith(verifiedAssignment: ok);
       return ok;
     } catch (e) {
@@ -124,7 +128,7 @@ class RideTrackingNotifier extends FamilyNotifier<RideTrackingState, String> {
       return false;
     }
     try {
-      final ok = await _rideRepository.startRide(args, startCode: enteredStartCode.trim());
+      final ok = await _rideRepository.startRide(_rideId, startCode: enteredStartCode.trim());
       if (ok) {
         state = state.copyWith(started: true, status: RideStatus.inProgress);
       }
@@ -141,7 +145,7 @@ class RideTrackingNotifier extends FamilyNotifier<RideTrackingState, String> {
       return false;
     }
     try {
-      final ok = await _rideRepository.completeRide(args);
+      final ok = await _rideRepository.completeRide(_rideId);
       if (ok) {
         state = state.copyWith(status: RideStatus.completed, completed: true);
       }
@@ -158,7 +162,7 @@ class RideTrackingNotifier extends FamilyNotifier<RideTrackingState, String> {
       return false;
     }
     try {
-      final ok = await _rideRepository.cancelRide(args, reason: reason, actor: actor);
+      final ok = await _rideRepository.cancelRide(_rideId, reason: reason, actor: actor);
       if (ok) {
         state = state.copyWith(
           status: RideStatus.cancelled,

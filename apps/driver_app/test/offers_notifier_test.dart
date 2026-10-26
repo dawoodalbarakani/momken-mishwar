@@ -6,7 +6,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
-class MockOffersRepository extends Mock implements OffersRepository {}
+// Hand-written, generated-style overrides (nullable params) so mockito's `any`
+// matcher is valid at non-nullable call sites.
+class MockOffersRepository extends Mock implements OffersRepository {
+  @override
+  Future<List<Offer>> fetchOffers() => (super.noSuchMethod(
+        Invocation.method(#fetchOffers, []),
+        returnValue: Future<List<Offer>>.value(const <Offer>[]),
+      ) as Future<List<Offer>>);
+
+  @override
+  Future<bool> acceptOffer(String? offerId,
+          {String? rideId, String? idempotencyKey}) =>
+      (super.noSuchMethod(
+        Invocation.method(#acceptOffer, [offerId],
+            {#rideId: rideId, #idempotencyKey: idempotencyKey}),
+        returnValue: Future<bool>.value(false),
+      ) as Future<bool>);
+
+  @override
+  Future<bool> rejectOffer(String? offerId) => (super.noSuchMethod(
+        Invocation.method(#rejectOffer, [offerId]),
+        returnValue: Future<bool>.value(false),
+      ) as Future<bool>);
+}
 
 void main() {
   late MockOffersRepository repo;
@@ -70,7 +93,8 @@ void main() {
 
   test('acceptOffer marks offer accepted and sets active ride', () async {
     when(repo.fetchOffers()).thenAnswer((_) async => [buildOffer('o1')]);
-    when(repo.acceptOffer(any, rideId: any, idempotencyKey: any))
+    when(repo.acceptOffer(any,
+            rideId: anyNamed('rideId'), idempotencyKey: anyNamed('idempotencyKey')))
         .thenAnswer((_) async => true);
 
     final notifier = container.read(offersViewModelProvider.notifier);

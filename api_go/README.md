@@ -30,6 +30,11 @@ go run ./cmd/api
 - `GET /health/live`: process liveness; no database dependency.
 - `GET /health/ready`: checks PostgreSQL.
 - `GET /api/v1`: service metadata.
+- `POST /api/v1/auth/otp/request`: request a single-use OTP.
+- `POST /api/v1/auth/otp/verify`: verify OTP and issue access + refresh tokens.
+- `POST /api/v1/auth/refresh`: rotate refresh token and issue a new token pair.
+- `POST /api/v1/auth/logout`: revoke refresh token family.
+- `GET /api/v1/auth/me`: retrieve authenticated user profile (requires Bearer JWT).
 
 ## Identity module status
 
@@ -38,12 +43,13 @@ The identity foundations are under `internal/modules/identity`:
 - `domain`: user roles/status and OTP challenge lifecycle invariants.
 - `ports`: repository interfaces for users, OTP challenges, and refresh tokens.
 - `adapters/postgres`: user/role lookups, OTP persistence and row-locked verification, refresh-token rotation/revocation, and a shared PostgreSQL fixed-window OTP request limiter.
+- `adapters/delivery`: OTP delivery dispatch with console and stub providers, plus a production startup guard forbidding console delivery.
 - `service`: cryptographically random six-digit OTP generation, keyed HMAC-SHA256 challenge storage/verification, access-token issuance/verification, session login/refresh, and refresh-token family revocation.
 - `internal/httpapi/auth_handlers.go`: OTP request, OTP login, refresh, and logout handlers with strict JSON decoding and bounded request bodies.
 
 The shared OTP limiter is implemented in `adapters/postgres/otp_request_limiter.go`; it enforces separate phone and IP quotas transactionally across API instances. It stores HMAC digests of scope identifiers rather than raw phone/IP values. Apply `database/migrations/0002_otp_request_limits.sql` before using it. Supply a dedicated random limiter key of at least 32 bytes, distinct from the OTP challenge pepper and JWT signing key. The rate-limit table requires periodic retention cleanup; schedule deletion of rows whose `window_started_at` is older than your retention window.
 
-The HTTP handlers and service building blocks are not yet wired into `cmd/api/main.go`. Production activation still requires a real SMS/voice delivery adapter, secrets from the deployment secret store, limiter configuration, and integration/contract tests. Do not expose OTP endpoints publicly until the real delivery provider and shared limiter are configured. Account provisioning and phone-verification workflows also require explicit product policy. Do not treat this scaffold as a production replacement for the existing TypeScript API.
+The HTTP handlers, delivery adapters, and service building blocks are wired into `cmd/api/main.go` and `internal/httpapi/router.go`. For production activation, provide distinct production keys (>= 32 bytes) from the deployment secret store, configure a production SMS aggregator provider (the console provider is rejected in production), and run integration/contract tests against PostgreSQL. Account provisioning and phone-verification workflows require explicit product policy. Do not treat this scaffold as a production replacement for the existing TypeScript API.
 
 ## Integration plan
 

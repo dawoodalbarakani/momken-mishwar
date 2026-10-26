@@ -6,7 +6,52 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
-class MockAuthRepository extends Mock implements AuthRepository {}
+// Hand-written, generated-style overrides: parameters are widened to nullable
+// so mockito's `any` matcher (typed Null) is valid at non-nullable call sites.
+class MockAuthRepository extends Mock implements AuthRepository {
+  // Every member stubbed via `when(...)` (including getters and thenThrow
+  // stubs) needs a generated-style override with a typed `returnValue`:
+  // mockito returns it during the when-phase, and a bare `null` there would
+  // throw a synchronous type error that leaks mockito's global when-state.
+  @override
+  Future<String?> get accessToken => (super.noSuchMethod(
+        Invocation.getter(#accessToken),
+        returnValue: Future<String?>.value(),
+      ) as Future<String?>);
+
+  @override
+  Future<AuthUser> loadMe() => (super.noSuchMethod(
+        Invocation.method(#loadMe, []),
+        returnValue: Future<AuthUser>.value(
+          const AuthUser(
+            id: '',
+            phone: '',
+            verificationStatus: VerificationStatus.pending,
+          ),
+        ),
+      ) as Future<AuthUser>);
+
+  @override
+  Future<void> logout() => (super.noSuchMethod(
+        Invocation.method(#logout, []),
+        returnValue: Future<void>.value(),
+        // Never stubbed in these tests — the notifier calls it for real, so
+        // mockito needs a canned response for the missing stub.
+        returnValueForMissingStub: Future<void>.value(),
+      ) as Future<void>);
+
+  @override
+  Future<bool> requestOtp(String? phone) => (super.noSuchMethod(
+        Invocation.method(#requestOtp, [phone]),
+        returnValue: Future<bool>.value(false),
+      ) as Future<bool>);
+
+  @override
+  Future<AuthResult> verifyOtp(String? phone, String? otp) => (super.noSuchMethod(
+        Invocation.method(#verifyOtp, [phone, otp]),
+        returnValue: Future<AuthResult>.value(const AuthResult(accessToken: '')),
+      ) as Future<AuthResult>);
+}
 
 void main() {
   late MockAuthRepository repo;

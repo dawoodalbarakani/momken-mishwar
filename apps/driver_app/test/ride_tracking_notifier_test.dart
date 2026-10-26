@@ -6,7 +6,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
-class MockRideRepository extends Mock implements RideRepository {}
+// Hand-written, generated-style overrides (nullable params) so mockito's `any`
+// matcher is valid at non-nullable call sites.
+class MockRideRepository extends Mock implements RideRepository {
+  @override
+  Future<Ride> getRide(String? rideId) => (super.noSuchMethod(
+        Invocation.method(#getRide, [rideId]),
+        returnValue: Future<Ride>.value(const Ride(id: '')),
+      ) as Future<Ride>);
+
+  @override
+  Future<bool> startRide(String? rideId, {String? startCode}) => (super.noSuchMethod(
+        Invocation.method(#startRide, [rideId], {#startCode: startCode}),
+        returnValue: Future<bool>.value(false),
+      ) as Future<bool>);
+
+  @override
+  Future<bool> cancelRide(String? rideId, {String? reason, String? actor}) =>
+      (super.noSuchMethod(
+        Invocation.method(#cancelRide, [rideId], {#reason: reason, #actor: actor}),
+        returnValue: Future<bool>.value(false),
+      ) as Future<bool>);
+}
 
 void main() {
   late MockRideRepository repo;
@@ -60,7 +81,7 @@ void main() {
     when(repo.getRide(any)).thenAnswer(
       (_) async => const Ride(id: 'r1', startCode: '1234', verifiedAssignment: true),
     );
-    when(repo.startRide(any, startCode: any)).thenAnswer((_) async => true);
+    when(repo.startRide(any, startCode: anyNamed('startCode'))).thenAnswer((_) async => true);
     final notifier = await pumpNotifier('r1');
 
     final ok = await notifier.startRide('1234');
@@ -85,7 +106,7 @@ void main() {
 
   test('cancelRide records cancellation details', () async {
     when(repo.getRide(any)).thenAnswer((_) async => const Ride(id: 'r1'));
-    when(repo.cancelRide(any, reason: any, actor: any))
+    when(repo.cancelRide(any, reason: anyNamed('reason'), actor: anyNamed('actor')))
         .thenAnswer((_) async => true);
     final notifier = await pumpNotifier('r1');
 
@@ -98,7 +119,10 @@ void main() {
   });
 
   test('restore failure surfaces an error', () async {
-    when(repo.getRide(any)).thenThrow(Exception('network'));
+    // Throw asynchronously (like a real network failure): a synchronous throw
+    // would write state during build(), which Riverpod forbids.
+    when(repo.getRide(any))
+        .thenAnswer((_) async => throw Exception('network'));
     await pumpNotifier('r1');
 
     final state = container.read(rideTrackingViewModelProvider('r1'));
