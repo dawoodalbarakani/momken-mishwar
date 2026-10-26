@@ -2,18 +2,6 @@ name: Build Flutter APKs
 
 on:
   workflow_call:
-  push:
-    branches: [main, master]
-    paths:
-      - 'apps/rider_app/**'
-      - 'apps/driver_app/**'
-      - '.github/workflows/build-flutter-apk.yml'
-  pull_request:
-    branches: [main, master]
-    paths:
-      - 'apps/rider_app/**'
-      - 'apps/driver_app/**'
-  workflow_dispatch:
 
 permissions:
   contents: read
