@@ -13,6 +13,8 @@ on:
       - 'package-lock.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/**'
   pull_request:
     branches: [main, master]
@@ -24,6 +26,8 @@ on:
       - 'database/**'
       - 'package.json'
       - 'package-lock.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/**'
   workflow_dispatch:
 
@@ -129,16 +133,22 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: package-lock.json
 
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - name: Import npm lockfile for pnpm
+        run: pnpm import
+
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Apply database migrations
         run: ./database/run-migrations.sh
@@ -149,7 +159,7 @@ jobs:
           test "$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X -t -A -c "SELECT count(*) FROM schema_migrations;")" -ge 2
 
       - name: Run real PostgreSQL concurrency integration scenarios
-        run: npm --workspace @mishwar/api exec -- tsx src/concurrency_scenarios.ts
+        run: pnpm --filter @mishwar/api exec tsx src/concurrency_scenarios.ts
 
   admin-web:
     name: Admin web checks
