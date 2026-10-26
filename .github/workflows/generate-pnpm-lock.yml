@@ -32,12 +32,13 @@ jobs:
         run: pnpm import
       - name: Commit generated lockfile
         run: |
-          if git diff --quiet -- pnpm-lock.yaml; then
-            echo "pnpm-lock.yaml is already up to date"
+          test -s pnpm-lock.yaml
+          git add pnpm-lock.yaml
+          if git diff --cached --quiet -- pnpm-lock.yaml; then
+            echo "pnpm-lock.yaml is already tracked and up to date"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml
           git commit -m "chore: add generated pnpm lockfile"
           git push
