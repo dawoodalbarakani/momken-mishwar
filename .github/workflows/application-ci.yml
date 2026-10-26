@@ -36,6 +36,22 @@ jobs:
   api:
     name: API checks
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: mishwar_test
+          POSTGRES_USER: mishwar
+          POSTGRES_PASSWORD: mishwar_test_only
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U mishwar -d mishwar_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://mishwar:mishwar_test_only@localhost:5433/mishwar_test
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -51,6 +67,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Apply database migrations
+        run: ./database/run-migrations.sh
 
       - name: Generate Prisma client
         run: npm --workspace @mishwar/api run prisma:generate
