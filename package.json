@@ -3,10 +3,11 @@
   "private": true,
   "version": "0.1.0",
   "description": "Mishwar Yemen — ride-hailing platform monorepo",
+  "packageManager": "pnpm@10.18.3",
   "workspaces": ["apps/api"],
   "scripts": {
-    "test:domain": "npm --workspace @mishwar/api run test:domain",
-    "typecheck": "npm --workspace @mishwar/api run typecheck",
+    "test:domain": "pnpm --filter @mishwar/api run test:domain",
+    "typecheck": "pnpm --filter @mishwar/api run typecheck",
     "db:up": "docker compose -f infrastructure/docker/docker-compose.yml up -d db",
     "db:migrate": "./database/run-migrations.sh",
     "db:seed:reference": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f database/seeds/001_reference_data.sql"
