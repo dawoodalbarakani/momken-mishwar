@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../data/services/connectivity_service.dart';
 import '../../../../domain/models/available_ride.dart';
+import '../../../core/responsive.dart';
 import '../view_models/home_view_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -35,77 +36,162 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ]),
       body: Padding(
+        padding: context.responsivePadding,
+        child: ContentMaxWidth(
+          maxWidth: 900,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _AvailabilityCard(
+                online: online,
+                isLoading: vm.isLoading,
+                lastLocationUpdate: vm.lastLocationUpdate,
+                connectionStatus: vm.connectionStatus,
+                error: vm.error,
+                onToggle: () => ref.read(homeViewModelProvider.notifier).toggleAvailability(),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'الرحلات المتاحة',
+                style: TextStyle(
+                  fontSize: fluidFontSize(context, min: 16, max: 20),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: vm.availableRides.isEmpty
+                    ? const Center(child: Text('لا توجد رحلات متاحة حالياً'))
+                    : _RideList(rides: vm.availableRides, offline: vm.availability == AvailabilityStatus.offline),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvailabilityCard extends StatelessWidget {
+  final bool online;
+  final bool isLoading;
+  final DateTime? lastLocationUpdate;
+  final ConnectionStatus connectionStatus;
+  final String? error;
+  final VoidCallback onToggle;
+
+  const _AvailabilityCard({
+    required this.online,
+    required this.isLoading,
+    required this.connectionStatus,
+    required this.onToggle,
+    this.lastLocationUpdate,
+    this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        const Text('حالة التوفر: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(width: 8),
-                        Chip(
-                          label: Text(online ? 'متصل (أونلاين)' : 'غير متصل (أوفلاين)'),
-                          backgroundColor: online ? Colors.green.shade50 : Colors.grey.shade50,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        icon: Icon(online ? Icons.cancel : Icons.check_circle),
-                        label: Text(online ? 'الانقطاع عن العمل' : 'الاتصال بالعمل'),
-                        onPressed: vm.isLoading
-                            ? null
-                            : () => ref.read(homeViewModelProvider.notifier).toggleAvailability(),
-                      ),
-                    ),
-                    if (vm.lastLocationUpdate != null) ...[
-                      const SizedBox(height: 8),
-                      Text('آخر تحديث موقع: ${vm.lastLocationUpdate!.toLocal().toString().substring(11, 19)}'),
-                    ],
-                    if (vm.connectionStatus == ConnectionStatus.offline)
-                      const Text('لا يوجد اتصال بالإنترنت', style: TextStyle(color: Colors.red, fontSize: 12)),
-                    if (vm.error != null)
-                      Text(vm.error!, style: const TextStyle(color: Colors.red, fontSize: 12)),
-                  ],
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    'حالة التوفر: ',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('الرحلات المتاحة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Expanded(
-              child: vm.availableRides.isEmpty
-                  ? const Center(child: Text('لا توجد رحلات متاحة حالياً'))
-                  : ListView.builder(
-                      itemCount: vm.availableRides.length,
-                      itemBuilder: (context, i) {
-                        final r = vm.availableRides[i];
-                        return Card(
-                          child: ListTile(
-                            title: Text('${r.pickup} → ${r.destination}'),
-                            subtitle: Text('الأجرة: ${r.fare.toStringAsFixed(0)} ريال · المسافة: ${(r.distanceMeters / 1000).toStringAsFixed(1)} كم · تنتهي بعد ${r.expiresAt.difference(DateTime.now()).inMinutes} دقيقة'),
-                            trailing: ElevatedButton(
-                              onPressed: vm.availability == AvailabilityStatus.offline
-                                  ? null
-                                  : () => context.go('/offers'),
-                              child: const Text('عرض العروض'),
-                            ),
-                          ),
-                        );
-                      },
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Chip(
+                    label: Text(
+                      online ? 'متصل (أونلاين)' : 'غير متصل (أوفلاين)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    backgroundColor: online ? Colors.green.shade50 : Colors.grey.shade50,
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: Icon(online ? Icons.cancel : Icons.check_circle),
+              label: Text(online ? 'الانقطاع عن العمل' : 'الاتصال بالعمل'),
+              onPressed: isLoading ? null : onToggle,
+            ),
+            if (lastLocationUpdate != null) ...[
+              const SizedBox(height: 8),
+              Text('آخر تحديث موقع: ${lastLocationUpdate!.toLocal().toString().substring(11, 19)}'),
+            ],
+            if (connectionStatus == ConnectionStatus.offline)
+              const Text('لا يوجد اتصال بالإنترنت', style: TextStyle(color: Colors.red, fontSize: 12)),
+            if (error != null)
+              Text(error!, style: const TextStyle(color: Colors.red, fontSize: 12)),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// One column on mobile, two once there's room for them side-by-side.
+class _RideList extends StatelessWidget {
+  final List<AvailableRide> rides;
+  final bool offline;
+
+  const _RideList({required this.rides, required this.offline});
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = responsiveColumnCount(context);
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: columns == 1 ? 3.2 : 2.6,
+      ),
+      itemCount: rides.length,
+      itemBuilder: (context, i) {
+        final r = rides[i];
+        return Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${r.pickup} → ${r.destination}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
+                      Text(
+                        'الأجرة: ${r.fare.toStringAsFixed(0)} ريال · المسافة: ${(r.distanceMeters / 1000).toStringAsFixed(1)} كم · تنتهي بعد ${r.expiresAt.difference(DateTime.now()).inMinutes} دقيقة',
+                        style: const TextStyle(fontSize: 12),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: offline ? null : () => context.go('/offers'),
+                  child: const Text('عرض العروض'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

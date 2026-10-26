@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/responsive.dart';
 import '../view_models/earnings_view_model.dart';
 
 class PayoutRequestScreen extends ConsumerStatefulWidget {
@@ -44,32 +45,32 @@ class _PayoutRequestScreenState extends ConsumerState<PayoutRequestScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('طلب تسوية / نزاع مالي')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('اطلب مراجعة مبلغ أو تسجيل نزاع مالي على مستحقاتك.'),
-            const SizedBox(height: 16),
-            Text('صافي المستحقات المتاح: ${vm.netPayable.toStringAsFixed(0)} ريال', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'المبلغ المطلوب (ريال)', hintText: 'أدخل المبلغ'),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
+        padding: context.responsivePadding,
+        child: ContentMaxWidth(
+          maxWidth: 560,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('اطلب مراجعة مبلغ أو تسجيل نزاع مالي على مستحقاتك.'),
+              const SizedBox(height: 16),
+              Text('صافي المستحقات المتاح: ${vm.netPayable.toStringAsFixed(0)} ريال', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+              TextField(
+                controller: _amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'المبلغ المطلوب (ريال)', hintText: 'أدخل المبلغ'),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
                 onPressed: _submitting ? null : _request,
                 child: _submitting
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('إرسال الطلب'),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextButton(onPressed: () => context.go('/earnings'), child: const Text('العودة')),
-          ],
+              const SizedBox(height: 16),
+              TextButton(onPressed: () => context.go('/earnings'), child: const Text('العودة')),
+            ],
+          ),
         ),
       ),
     );

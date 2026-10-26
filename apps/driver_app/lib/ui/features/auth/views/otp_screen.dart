@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/app_constants.dart';
+import '../../../core/responsive.dart';
 import '../view_models/auth_view_model.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
@@ -92,47 +93,60 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('التحقق من الرمز')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('أدخل الرمز المكون من ${AppConstants.otpLength} أرقام المرسل إلى ${widget.phone}'),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(6, (i) {
-                return SizedBox(
-                  width: 48,
-                  child: TextField(
-                    controller: _controllers[i],
-                    focusNode: _focusNodes[i],
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    maxLength: 1,
-                    onChanged: (v) {
-                      _focusNodes[i + 1 < 6 ? i + 1 : i].requestFocus();
-                    },
-                    decoration: const InputDecoration(counterText: ''),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
+        padding: context.responsivePadding,
+        child: ContentMaxWidth(
+          maxWidth: 480,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('أدخل الرمز المكون من ${AppConstants.otpLength} أرقام المرسل إلى ${widget.phone}'),
+              const SizedBox(height: 24),
+              // Cell width is derived from the available width instead of a
+              // fixed 48px, so the row never overflows a narrow viewport and
+              // never looks sparse on a wide one.
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  const spacing = 8.0;
+                  final cellWidth = clampValue(
+                    (constraints.maxWidth - spacing * (AppConstants.otpLength - 1)) / AppConstants.otpLength,
+                    min: 40,
+                    max: 64,
+                  );
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(AppConstants.otpLength, (i) {
+                      return SizedBox(
+                        width: cellWidth,
+                        child: TextField(
+                          controller: _controllers[i],
+                          focusNode: _focusNodes[i],
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          maxLength: 1,
+                          onChanged: (v) {
+                            _focusNodes[i + 1 < AppConstants.otpLength ? i + 1 : i].requestFocus();
+                          },
+                          decoration: const InputDecoration(counterText: ''),
+                        ),
+                      );
+                    }),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
                 onPressed: _verifying ? null : _verify,
                 child: _verifying
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('تحقق'),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: _resendSeconds > 0 ? null : _resend,
-              child: Text(_resendSeconds > 0 ? 'إعادة الإرسال بعد $_resendSeconds ث' : 'إعادة الإرسال'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: _resendSeconds > 0 ? null : _resend,
+                child: Text(_resendSeconds > 0 ? 'إعادة الإرسال بعد $_resendSeconds ث' : 'إعادة الإرسال'),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../core/app_constants.dart';
+import '../../../core/responsive.dart';
 import '../view_models/auth_view_model.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -55,32 +56,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('تسجيل الدخول')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('أدخل رقم هاتفك اليمني لطلب رمز التحقق'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'رقم الهاتف',
-                prefixText: '+967 ',
-                hintText: '771234567',
+        padding: context.responsivePadding,
+        child: ContentMaxWidth(
+          maxWidth: 480,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('أدخل رقم هاتفك اليمني لطلب رمز التحقق'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'رقم الهاتف',
+                  prefixText: '+967 ',
+                  hintText: '771234567',
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
+              const SizedBox(height: 24),
+              ElevatedButton(
                 onPressed: _requesting ? null : _requestOtp,
                 child: _requesting
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('طلب رمز التحقق'),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

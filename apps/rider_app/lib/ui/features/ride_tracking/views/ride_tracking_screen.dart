@@ -1,6 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/map_surface.dart';
+import '../../../core/responsive.dart';
 import '../view_models/ride_tracking_view_model.dart';
 
 class RideTrackingScreen extends ConsumerWidget {
@@ -15,39 +17,42 @@ class RideTrackingScreen extends ConsumerWidget {
       body: Column(
         children: [
           Expanded(
-            child: Container(
-              color: Colors.grey.shade200,
-              child: state.driverLocation == null
-                  ? const Center(child: Text('انتظار موقع السائق...'))
-                  : const Center(child: Text('موقع السائق على الخريطة')),
+            child: MapSurface(
+              initialCenter: state.driverLocation ?? MapSurface.defaultCenter,
+              initialZoom: 15,
+              markerPosition: state.driverLocation,
+              markerLabel: 'السائق',
+              placeholderLabel: state.driverLocation == null
+                  ? 'انتظار موقع السائق...'
+                  : 'موقع السائق على الخريطة',
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (state.driverName != null) Text('السائق: ${state.driverName}'),
-                if (state.vehiclePlate != null) Text('المركبة: ${state.vehiclePlate}'),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Text('عمر البيانات: '),
-                    Text(state.isLocationFresh ? 'مباشر' : 'قديم/غير موثوق', style: TextStyle(color: state.isLocationFresh ? Colors.green : Colors.orange)),
-                  ],
-                ),
-                if (state.startCode != null) ...[
+            padding: context.responsivePadding,
+            child: ContentMaxWidth(
+              maxWidth: 560,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (state.driverName != null) Text('السائق: ${state.driverName}'),
+                  if (state.vehiclePlate != null) Text('المركبة: ${state.vehiclePlate}'),
                   const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    color: Colors.blue.shade50,
-                    child: Text('رمز بدء الرحلة: ${state.startCode}', textAlign: TextAlign.center),
+                  Row(
+                    children: [
+                      const Flexible(child: Text('عمر البيانات: ')),
+                      Text(state.isLocationFresh ? 'مباشر' : 'قديم/غير موثوق', style: TextStyle(color: state.isLocationFresh ? Colors.green : Colors.orange)),
+                    ],
                   ),
-                ],
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 48,
-                  child: ElevatedButton(
+                  if (state.startCode != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      color: Colors.blue.shade50,
+                      child: Text('رمز بدء الرحلة: ${state.startCode}', textAlign: TextAlign.center),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  ElevatedButton(
                     onPressed: () async {
                       final ok = await ref
                           .read(rideTrackingViewModelProvider(rideId).notifier)
@@ -59,16 +64,13 @@ class RideTrackingScreen extends ConsumerWidget {
                     },
                     child: const Text('إلغاء الرحلة'),
                   ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 48,
-                  child: OutlinedButton(
+                  const SizedBox(height: 8),
+                  OutlinedButton(
                     onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('سيتم دعم البلاغ قريباً'))),
                     child: const Text('إبلاغ عن مشكلة'),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

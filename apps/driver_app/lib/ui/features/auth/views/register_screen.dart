@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/app_constants.dart';
+import '../../../core/responsive.dart';
 import '../view_models/auth_view_model.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -76,35 +77,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('تسجيل سائق جديد')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ListView(
-          children: [
-            const Text('البيانات الأساسية للسائق'),
-            const SizedBox(height: 16),
-            TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'الاسم الكامل')),
-            const SizedBox(height: 12),
-            TextField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixText: '+967 ', hintText: '771234567')),
-            const SizedBox(height: 12),
-            TextField(controller: _vehicleTypeController, decoration: const InputDecoration(labelText: 'نوع المركبة')),
-            const SizedBox(height: 12),
-            TextField(controller: _plateController, decoration: const InputDecoration(labelText: 'لوحة المركبة')),
-            const SizedBox(height: 12),
-            TextField(controller: _nationalIdController, decoration: const InputDecoration(labelText: 'الرقم الوطني')),
-            const SizedBox(height: 12),
-            TextField(controller: _licenseController, decoration: const InputDecoration(labelText: 'رقم رخصة القيادة')),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
+        padding: context.responsivePadding,
+        child: ContentMaxWidth(
+          maxWidth: 560,
+          child: ListView(
+            children: [
+              const Text('البيانات الأساسية للسائق'),
+              const SizedBox(height: 16),
+              TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'الاسم الكامل')),
+              const SizedBox(height: 12),
+              TextField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixText: '+967 ', hintText: '771234567')),
+              const SizedBox(height: 12),
+              TextField(controller: _vehicleTypeController, decoration: const InputDecoration(labelText: 'نوع المركبة')),
+              const SizedBox(height: 12),
+              TextField(controller: _plateController, decoration: const InputDecoration(labelText: 'لوحة المركبة')),
+              const SizedBox(height: 12),
+              TextField(controller: _nationalIdController, decoration: const InputDecoration(labelText: 'الرقم الوطني')),
+              const SizedBox(height: 12),
+              TextField(controller: _licenseController, decoration: const InputDecoration(labelText: 'رقم رخصة القيادة')),
+              const SizedBox(height: 24),
+              ElevatedButton(
                 onPressed: _registering ? null : _register,
                 child: _registering
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('تسجيل'),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextButton(onPressed: () => context.go('/login'), child: const Text('لديك حساب؟ تسجيل الدخول')),
-          ],
+              const SizedBox(height: 16),
+              TextButton(onPressed: () => context.go('/login'), child: const Text('لديك حساب؟ تسجيل الدخول')),
+            ],
+          ),
         ),
       ),
     );

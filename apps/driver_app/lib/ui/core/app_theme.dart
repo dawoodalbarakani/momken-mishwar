@@ -52,6 +52,10 @@ ThemeData appTheme() => ThemeData(
       backgroundColor: UberColors.black,
       foregroundColor: UberColors.white,
       elevation: 0,
+      // 44px minimum keeps every primary action touch-friendly regardless of
+      // label length; width is left free since buttons are usually full-width.
+      minimumSize: const Size(0, 44),
+      tapTargetSize: MaterialTapTargetSize.padded,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       shape: const StadiumBorder(),
       textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
@@ -61,6 +65,8 @@ ThemeData appTheme() => ThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: UberColors.black,
       side: const BorderSide(color: UberColors.black, width: 1),
+      minimumSize: const Size(0, 44),
+      tapTargetSize: MaterialTapTargetSize.padded,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       shape: const StadiumBorder(),
       textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
@@ -69,9 +75,17 @@ ThemeData appTheme() => ThemeData(
   textButtonTheme: TextButtonThemeData(
     style: TextButton.styleFrom(
       foregroundColor: UberColors.black,
+      minimumSize: const Size(0, 44),
+      tapTargetSize: MaterialTapTargetSize.padded,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       shape: const StadiumBorder(),
       textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+    ),
+  ),
+  iconButtonTheme: IconButtonThemeData(
+    style: IconButton.styleFrom(
+      minimumSize: const Size(44, 44),
+      tapTargetSize: MaterialTapTargetSize.padded,
     ),
   ),
   inputDecorationTheme: InputDecorationTheme(

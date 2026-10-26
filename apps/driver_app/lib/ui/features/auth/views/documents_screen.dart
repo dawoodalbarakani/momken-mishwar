@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../domain/models/auth_user.dart';
 import '../../../../domain/models/document.dart';
+import '../../../core/responsive.dart';
 import '../view_models/documents_view_model.dart';
 
 class DocumentsScreen extends ConsumerWidget {
@@ -14,38 +15,38 @@ class DocumentsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('المستندات والاعتماد')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('حالة الاعتماد: ${_label(vm.overallStatus)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView(
-                children: DocumentType.values.map((t) {
-                  final doc = vm.documents[t]!;
-                  return Card(
-                    child: ListTile(
-                      title: Text(_typeLabel(t)),
-                      subtitle: Text(_statusLabel(doc.status)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (doc.status == VerificationStatus.pending && doc.uploadUrl == null)
-                            TextButton(onPressed: () => _upload(context, t), child: const Text('رفع')),
-                          if (doc.status == VerificationStatus.rejected)
-                            Text(doc.rejectionReason ?? 'مرفوض', style: const TextStyle(color: Colors.red, fontSize: 12)),
-                        ],
+        padding: context.responsivePadding,
+        child: ContentMaxWidth(
+          maxWidth: 720,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('حالة الاعتماد: ${_label(vm.overallStatus)}', style: TextStyle(fontSize: fluidFontSize(context, min: 18, max: 22), fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: DocumentType.values.map((t) {
+                    final doc = vm.documents[t]!;
+                    return Card(
+                      child: ListTile(
+                        title: Text(_typeLabel(t)),
+                        subtitle: Text(_statusLabel(doc.status)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (doc.status == VerificationStatus.pending && doc.uploadUrl == null)
+                              TextButton(onPressed: () => _upload(context, t), child: const Text('رفع')),
+                            if (doc.status == VerificationStatus.rejected)
+                              Flexible(child: Text(doc.rejectionReason ?? 'مرفوض', style: const TextStyle(color: Colors.red, fontSize: 12), overflow: TextOverflow.ellipsis)),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }).toList(),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 48,
-              child: ElevatedButton(
+              const SizedBox(height: 16),
+              ElevatedButton(
                 onPressed: vm.submitting
                     ? null
                     : () => ref.read(documentsViewModelProvider.notifier).submitDocuments(),
@@ -53,12 +54,12 @@ class DocumentsScreen extends ConsumerWidget {
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('إرسال للمراجعة'),
               ),
-            ),
-            if (vm.error != null) ...[
-              const SizedBox(height: 8),
-              Text(vm.error!, style: const TextStyle(color: Colors.red)),
+              if (vm.error != null) ...[
+                const SizedBox(height: 8),
+                Text(vm.error!, style: const TextStyle(color: Colors.red)),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
