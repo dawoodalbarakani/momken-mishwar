@@ -1,76 +1,87 @@
 
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/services/connectivity_service.dart';
 import '../../../../data/repositories/ride_repository.dart';
 import '../../../../domain/models/available_ride.dart';
 
-class HomeViewModel extends ChangeNotifier {
-  HomeViewModel({
-    required RideRepository rideRepository,
-    required ConnectivityService connectivityService,
-  })  : _rideRepository = rideRepository,
-        _connectivityService = connectivityService {
-    _listenConnectivity();
+class HomeState {
+  const HomeState({
+    this.availability = AvailabilityStatus.offline,
+    this.availableRides = const [],
+    this.earningsSummary,
+    this.lastLocationUpdate,
+    this.connectionStatus = ConnectionStatus.unknown,
+    this.isLoading = false,
+    this.error,
+  });
+
+  final AvailabilityStatus availability;
+  final List<AvailableRide> availableRides;
+  final EarningsSummary? earningsSummary;
+  final DateTime? lastLocationUpdate;
+  final ConnectionStatus connectionStatus;
+  final bool isLoading;
+  final String? error;
+
+  HomeState copyWith({
+    AvailabilityStatus? availability,
+    List<AvailableRide>? availableRides,
+    EarningsSummary? earningsSummary,
+    DateTime? lastLocationUpdate,
+    ConnectionStatus? connectionStatus,
+    bool? isLoading,
+    String? error,
+    bool clearError = false,
+  }) {
+    return HomeState(
+      availability: availability ?? this.availability,
+      availableRides: availableRides ?? this.availableRides,
+      earningsSummary: earningsSummary ?? this.earningsSummary,
+      lastLocationUpdate: lastLocationUpdate ?? this.lastLocationUpdate,
+      connectionStatus: connectionStatus ?? this.connectionStatus,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+    );
   }
+}
 
-  final RideRepository _rideRepository;
-  final ConnectivityService _connectivityService;
-  StreamSubscription? _connectivitySubscription;
-
-  AvailabilityStatus _availability = AvailabilityStatus.offline;
-  AvailabilityStatus get availability => _availability;
-
-  List<AvailableRide> _availableRides = const [];
-  List<AvailableRide> get availableRides => _availableRides;
-
-  EarningsSummary? _earningsSummary;
-  EarningsSummary? get earningsSummary => _earningsSummary;
-
-  DateTime? _lastLocationUpdate;
-  DateTime? get lastLocationUpdate => _lastLocationUpdate;
-
-  ConnectionStatus _connectionStatus = ConnectionStatus.unknown;
-  ConnectionStatus get connectionStatus => _connectionStatus;
-
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
-
-  String? _error;
-  String? get error => _error;
-
-  void _listenConnectivity() {
-    _connectivitySubscription = _connectivityService.watch().listen((status) {
-      _connectionStatus = status;
-      notifyListeners();
+class HomeNotifier extends Notifier<HomeState> {
+  @override
+  HomeState build() {
+    final subscription = ref.read(connectivityServiceProvider).watch().listen((status) {
+      state = state.copyWith(connectionStatus: status);
     });
+    ref.onDispose(subscription.cancel);
+    return const HomeState();
   }
 
   Future<bool> toggleAvailability() async {
-    final target = _availability == AvailabilityStatus.offline ? AvailabilityStatus.online : AvailabilityStatus.offline;
-    _setLoading(true, error: null);
+    final target = state.availability == AvailabilityStatus.offline
+        ? AvailabilityStatus.online
+        : AvailabilityStatus.offline;
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final ok = await _rideRepository.toggleAvailability(available: target == AvailabilityStatus.online);
+      final ok = await ref.read(rideRepositoryProvider)
+          .toggleAvailability(available: target == AvailabilityStatus.online);
       if (ok) {
-        _availability = target;
+        state = state.copyWith(availability: target, isLoading: false);
+      } else {
+        state = state.copyWith(isLoading: false);
       }
-      _setLoading(false);
       return ok;
     } catch (e) {
-      _setLoading(false, error: 'فشل تغيير حالة التوفر');
+      state = state.copyWith(isLoading: false, error: 'فشل تغيير حالة التوفر');
       return false;
     }
   }
 
   Future<void> fetchAvailableRides() async {
-    _setLoading(true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      _availableRides = await _rideRepository.fetchAvailableRides();
-      _setLoading(false);
+      final rides = await ref.read(rideRepositoryProvider).fetchAvailableRides();
+      state = state.copyWith(availableRides: rides, isLoading: false);
     } catch (e) {
-      _setLoading(false, error: 'فشل جلب الرحلات المتاحة');
+      state = state.copyWith(isLoading: false, error: 'فشل جلب الرحلات المتاحة');
     }
   }
 
@@ -84,30 +95,13 @@ class HomeViewModel extends ChangeNotifier {
 
   Future<void> updateLocation(double latitude, double longitude) async {
     try {
-      await _rideRepository.updateLocation(latitude: latitude, longitude: longitude);
-      _lastLocationUpdate = DateTime.now();
-      notifyListeners();
+      await ref.read(rideRepositoryProvider)
+          .updateLocation(latitude: latitude, longitude: longitude);
+      state = state.copyWith(lastLocationUpdate: DateTime.now());
     } catch (e) {
       // non-fatal
     }
   }
-
-  void _setLoading(bool loading, {String? error}) {
-    _isLoading = loading;
-    if (error != null) _error = error;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _connectivitySubscription?.cancel();
-    super.dispose();
-  }
 }
 
-final homeViewModelProvider = ChangeNotifierProvider(
-  (ref) => HomeViewModel(
-    rideRepository: ref.read(rideRepositoryProvider),
-    connectivityService: ref.read(connectivityServiceProvider),
-  ),
-);
+final homeViewModelProvider = NotifierProvider<HomeNotifier, HomeState>(HomeNotifier.new);

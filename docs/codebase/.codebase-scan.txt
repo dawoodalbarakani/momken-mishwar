@@ -1,0 +1,536 @@
+
+=== DIRECTORY TREE (max depth 3, source files only) ===
+.agents
+.agents/skills
+.agents/skills/acquire-codebase-knowledge
+.agents/skills/acquire-codebase-knowledge/SKILL.md
+.agents/skills/acquire-codebase-knowledge/assets
+.agents/skills/acquire-codebase-knowledge/references
+.agents/skills/acquire-codebase-knowledge/scripts
+.agents/skills/acreadiness-assess
+.agents/skills/acreadiness-assess/SKILL.md
+.agents/skills/acreadiness-assess/report-template.html
+.agents/skills/acreadiness-generate-instructions
+.agents/skills/acreadiness-generate-instructions/SKILL.md
+.agents/skills/acreadiness-policy
+.agents/skills/acreadiness-policy/SKILL.md
+.agents/skills/ad-campaign-analyzer
+.agents/skills/ad-campaign-analyzer/SKILL.md
+.agents/skills/add-educational-comments
+.agents/skills/add-educational-comments/SKILL.md
+.agents/skills/add-missing-unit-test
+.agents/skills/add-missing-unit-test/SKILL.md
+.agents/skills/adobe-illustrator-scripting
+.agents/skills/adobe-illustrator-scripting/SKILL.md
+.agents/skills/adobe-illustrator-scripting/references
+.agents/skills/adobe-illustrator-scripting/scripts
+.agents/skills/agent-architecture
+.agents/skills/agent-architecture/LICENSE.txt
+.agents/skills/agent-architecture/SKILL.md
+.agents/skills/agent-architecture/agents
+.agents/skills/agent-architecture/references
+.agents/skills/agent-governance
+.agents/skills/agent-governance/SKILL.md
+.agents/skills/agent-owasp-compliance
+.agents/skills/agent-owasp-compliance/SKILL.md
+.agents/skills/agent-skill-stack
+.agents/skills/agent-skill-stack/SKILL.md
+.agents/skills/agent-skill-stack/agents
+.agents/skills/agent-skill-stack/references
+.agents/skills/agent-skill-stack/scripts
+.agents/skills/agent-supply-chain
+.agents/skills/agent-supply-chain/SKILL.md
+.agents/skills/agentic-eval
+.agents/skills/agentic-eval/SKILL.md
+.agents/skills/agentic-workflows
+.agents/skills/agentic-workflows/SKILL.md
+.agents/skills/ai-prompt-engineering-safety-review
+.agents/skills/ai-prompt-engineering-safety-review/SKILL.md
+.agents/skills/ai-ready
+.agents/skills/ai-ready/SKILL.md
+.agents/skills/ai-team-orchestration
+.agents/skills/ai-team-orchestration/SKILL.md
+.agents/skills/ai-team-orchestration/references
+.agents/skills/analyze-github-flake
+.agents/skills/analyze-github-flake/SKILL.md
+.agents/skills/angular-architect
+.agents/skills/angular-architect/SKILL.md
+.agents/skills/angular-architect/references
+.agents/skills/anti-ui-slop
+.agents/skills/anti-ui-slop/CHECKSUMS.sha256
+.agents/skills/anti-ui-slop/LICENSE
+.agents/skills/anti-ui-slop/MANIFEST.json
+.agents/skills/anti-ui-slop/MODIFICATIONS.md
+.agents/skills/anti-ui-slop/NOTICE
+.agents/skills/anti-ui-slop/SKILL.md
+.agents/skills/anti-ui-slop/agents
+.agents/skills/anti-ui-slop/reference
+.agents/skills/anti-ui-slop/references
+.agents/skills/api-breaking-change-detector
+.agents/skills/api-breaking-change-detector/SKILL.md
+.agents/skills/api-designer
+.agents/skills/api-designer/SKILL.md
+.agents/skills/api-designer/references
+.agents/skills/appinsights-instrumentation
+.agents/skills/appinsights-instrumentation/LICENSE.txt
+.agents/skills/appinsights-instrumentation/SKILL.md
+.agents/skills/appinsights-instrumentation/examples
+.agents/skills/appinsights-instrumentation/references
+.agents/skills/appinsights-instrumentation/scripts
+.agents/skills/apple-appstore-reviewer
+.agents/skills/apple-appstore-reviewer/SKILL.md
+.agents/skills/arch-linux-triage
+.agents/skills/arch-linux-triage/SKILL.md
+.agents/skills/architecture-blueprint-generator
+.agents/skills/architecture-blueprint-generator/SKILL.md
+.agents/skills/architecture-designer
+.agents/skills/architecture-designer/SKILL.md
+.agents/skills/architecture-designer/references
+.agents/skills/arduino-azure-iot-edge-integration
+.agents/skills/arduino-azure-iot-edge-integration/SKILL.md
+.agents/skills/arduino-azure-iot-edge-integration/references
+.agents/skills/arize-ai-provider-integration
+.agents/skills/arize-ai-provider-integration/SKILL.md
+.agents/skills/arize-ai-provider-integration/references
+.agents/skills/arize-annotation
+.agents/skills/arize-annotation/SKILL.md
+.agents/skills/arize-annotation/references
+.agents/skills/arize-dataset
+.agents/skills/arize-dataset/SKILL.md
+.agents/skills/arize-dataset/references
+.agents/skills/arize-evaluator
+.agents/skills/arize-evaluator/SKILL.md
+.agents/skills/arize-evaluator/references
+.agents/skills/arize-experiment
+.agents/skills/arize-experiment/SKILL.md
+.agents/skills/arize-experiment/references
+.agents/skills/arize-instrumentation
+.agents/skills/arize-instrumentation/SKILL.md
+.agents/skills/arize-instrumentation/references
+.agents/skills/arize-link
+.agents/skills/arize-link/SKILL.md
+.agents/skills/arize-link/references
+.agents/skills/arize-prompt-optimization
+.agents/skills/arize-prompt-optimization/SKILL.md
+.agents/skills/arize-prompt-optimization/references
+.agents/skills/arize-trace
+.agents/skills/arize-trace/SKILL.md
+.agents/skills/arize-trace/references
+.agents/skills/ask-matt
+.agents/skills/ask-matt/PHASE-BOUNDARIES.md
+.agents/skills/ask-matt/SKILL.md
+.agents/skills/ask-matt/agents
+.agents/skills/aspire
+.agents/skills/aspire/SKILL.md
+.agents/skills/aspire/references
+.agents/skills/aspnet-minimal-api-openapi
+.agents/skills/aspnet-minimal-api-openapi/SKILL.md
+.agents/skills/atlassian-mcp
+.agents/skills/atlassian-mcp/SKILL.md
+.agents/skills/atlassian-mcp/references
+.agents/skills/audit-accessibility
+.agents/skills/audit-accessibility/SKILL.md
+.agents/skills/audit-dependencies
+.agents/skills/audit-dependencies/SKILL.md
+.agents/skills/audit-integrity
+.agents/skills/audit-integrity/SKILL.md
+.agents/skills/audit-integrity/references
+.agents/skills/audit-ui-thread-safety
+.agents/skills/audit-ui-thread-safety/SKILL.md
+.agents/skills/automate-this
+.agents/skills/automate-this/SKILL.md
+.agents/skills/autoresearch
+.agents/skills/autoresearch/SKILL.md
+.agents/skills/aws-cdk-python-setup
+.agents/skills/aws-cdk-python-setup/SKILL.md
+.agents/skills/aws-cloudwatch-investigation
+.agents/skills/aws-cloudwatch-investigation/SKILL.md
+.agents/skills/aws-cost-optimize
+.agents/skills/aws-cost-optimize/SKILL.md
+.agents/skills/aws-resource-health-diagnose
+.agents/skills/aws-resource-health-diagnose/SKILL.md
+.agents/skills/aws-resource-query
+.agents/skills/aws-resource-query/SKILL.md
+.agents/skills/aws-well-architected-review
+.agents/skills/aws-well-architected-review/SKILL.md
+.agents/skills/az-cost-optimize
+.agents/skills/az-cost-optimize/SKILL.md
+.agents/skills/azure-architecture-autopilot
+.agents/skills/azure-architecture-autopilot/.gitignore
+.agents/skills/azure-architecture-autopilot/SKILL.md
+.agents/skills/azure-architecture-autopilot/assets
+.agents/skills/azure-architecture-autopilot/references
+.agents/skills/azure-architecture-autopilot/scripts
+.agents/skills/azure-container-registry-cli
+.agents/skills/azure-container-registry-cli/SKILL.md
+.agents/skills/azure-container-registry-cli/references
+.agents/skills/azure-deployment-preflight
+.agents/skills/azure-deployment-preflight/SKILL.md
+.agents/skills/azure-deployment-preflight/references
+.agents/skills/azure-developer-cli
+.agents/skills/azure-developer-cli/SKILL.md
+.agents/skills/azure-developer-cli/examples
+.agents/skills/azure-developer-cli/references
+.agents/skills/azure-devops-cli
+.agents/skills/azure-devops-cli/SKILL.md
+.agents/skills/azure-devops-cli/references
+.agents/skills/azure-pricing
+.agents/skills/azure-pricing/SKILL.md
+.agents/skills/azure-pricing/references
+.agents/skills/azure-resource-health-diagnose
+.agents/skills/azure-resource-health-diagnose/SKILL.md
+.agents/skills/azure-resource-visualizer
+.agents/skills/azure-resource-visualizer/LICENSE.txt
+.agents/skills/azure-resource-visualizer/SKILL.md
+.agents/skills/azure-resource-visualizer/assets
+.agents/skills/azure-role-selector
+.agents/skills/azure-role-selector/LICENSE.txt
+.agents/skills/azure-role-selector/SKILL.md
+.agents/skills/azure-smart-city-iot-solution-builder
+.agents/skills/azure-smart-city-iot-solution-builder/SKILL.md
+.agents/skills/azure-smart-city-iot-solution-builder/references
+.agents/skills/azure-static-web-apps
+.agents/skills/azure-static-web-apps/SKILL.md
+.agents/skills/azure-well-architected-review
+.agents/skills/azure-well-architected-review/SKILL.md
+.agents/skills/batch-files
+.agents/skills/batch-files/SKILL.md
+.agents/skills/batch-files/assets
+.agents/skills/batch-files/references
+.agents/skills/batch-script-progress
+.agents/skills/batch-script-progress/SKILL.md
+.agents/skills/batch-script-progress/examples
+
+=== STACK DETECTION (manifest files) ===
+
+--- Makefile ---
+SHELL := /bin/bash
+.SHELLFLAGS := -euo pipefail -c
+
+API_DIR := apps/api
+ADMIN_DIR := apps/admin_web
+RIDER_DIR := apps/rider_app
+DRIVER_DIR := apps/driver_app
+DOCKER_DIR := infrastructure/docker
+DATABASE_DIR := database
+DOCKER_COMPOSE_FILE := $(DOCKER_DIR)/docker-compose.yml
+
+DATABASE_URL ?= postgres://mishwar:mishwar_dev_only@localhost:5432/mishwar
+DATABASE_TEST_URL ?= postgres://mishwar:mishwar_test_only@localhost:5433/mishwar_test
+FLUTTER ?= flutter
+DC := docker compose -f $(DOCKER_COMPOSE_FILE)
+
+HASH := \#
+SEP := $(HASH)$(HASH)
+
+.PHONY: help up down db\:up db\:down db\:restart db\:logs db\:status db\:migrate db\:seed db\:reset db\:test\:up api\:install api\:typecheck api\:build api\:start api\:start\:dev api\:test api\:test\:domain api\:test\:cov api\:prisma\:generate api\:prisma\:db-pull api\:prisma\:seed admin\:install admin\:typecheck admin\:build admin\:dev admin\:lint flutter\:doctor rider\:install rider\:analyze driver\:install driver\:analyze install typecheck test test\:domain test\:all lint env\:setup test\:ci ci
+
+help: ## Show available make targets with descriptions
+	@bash -c 'grep "$(SEP)" $(MAKEFILE_LIST) | awk -F" $(SEP)" '\''{t=$$1; gsub(/\\/,"",t); if (substr(t,length(t))==":") t=substr(t,1,length(t)-1); printf "\033[36m%-28s\033[0m %s\n", t, $$2}'\''' sh "$(MAKEFILE_LIST)"
+
+# ---------------------------------------------------------------
+# Convenience aliases
+# ---------------------------------------------------------------
+
+up: db\:up ## Start the database service
+down: db\:down ## Stop the database and related services
+
+# ---------------------------------------------------------------
+# Database targets
+# ---------------------------------------------------------------
+
+db\:up: ## Start the postgres db service (port 5432)
+	$(DC) up -d db
+
+db\:down: ## Stop the database service
+	$(DC) down
+
+db\:restart: ## Restart the database service
+	$(DC) restart db
+
+db\:logs: ## Follow database service logs
+	$(DC) logs -f db
+
+db\:status: ## Show database service status
+	$(DC) ps db
+
+db\:migrate: ## Apply SQL migrations in order using DATABASE_URL
+	cd $(DATABASE_DIR) && DATABASE_URL=$(DATABASE_URL) ./run-migrations.sh
+
+db\:seed: ## Seed reference data into the database
+	psql "$(DATABASE_URL)" -v ON_ERROR_STOP=1 -f database/seeds/001_reference_data.sql
+
+db\:reset: db\:down db\:up db\:migrate db\:seed ## Reset database: down, up, migrate, seed
+
+db\:test\:up: ## Start the test database service (port 5433)
+	$(DC) up -d db_test
+
+# ---------------------------------------------------------------
+# API targets (NestJS)
+# ---------------------------------------------------------------
+
+api\:install: ## Install API dependencies
+	cd $(API_DIR) && npm install
+
+api\:typecheck: ## Run API typecheck
+	cd $(API_DIR) && npm run typecheck
+
+api\:build: ## Build the API
+	cd $(API_DIR) && npm run build
+
+api\:start: ## Start the API (production)
+	cd $(API_DIR) && npm run start
+
+api\:start\:dev: ## Start the API in watch mode
+	cd $(API_DIR) && npm run start:dev
+
+
+[TRUNCATED] Showing first 80 of 169 lines.
+--- package.json ---
+{
+  "name": "mishwar-yemen",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Mishwar Yemen — ride-hailing platform monorepo",
+  "packageManager": "pnpm@10.18.3",
+  "workspaces": ["apps/api"],
+  "scripts": {
+    "test:domain": "pnpm --filter @mishwar/api run test:domain",
+    "typecheck": "pnpm --filter @mishwar/api run typecheck",
+    "db:up": "docker compose -f infrastructure/docker/docker-compose.yml up -d db",
+    "db:migrate": "./database/run-migrations.sh",
+    "db:seed:reference": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f database/seeds/001_reference_data.sql"
+  },
+  "engines": { "node": ">=22" }
+}
+
+--- pnpm-lock.yaml ---
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  apps/api:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^12.2.0
+        version: 12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^4.0.0
+        version: 4.0.4(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^12.0.0
+        version: 12.0.0(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.1)(@nestjs/websockets@12.2.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/jwt':
+        specifier: ^12.0.0
+        version: 12.0.3(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))
+      '@nestjs/passport':
+        specifier: ^12.0.0
+        version: 12.0.0(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(passport@0.7.0)
+      '@nestjs/platform-express':
+        specifier: ^11.1.1
+        version: 11.1.1(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.0)
+      '@nestjs/platform-socket.io':
+        specifier: ^12.0.0
+        version: 12.2.0(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/websockets@12.2.0)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^12.0.0
+        version: 12.0.4(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.0)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(typescript@6.0.3)
+      '@nestjs/terminus':
+        specifier: ^12.0.0
+        version: 12.1.0(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.0)(@nestjs/swagger@12.0.4(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.0)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(typescript@6.0.3))(@prisma/client@5.22.0(prisma@5.22.0))(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/websockets':
+        specifier: ^12.0.0
+        version: 12.2.0(@nestjs/common@12.2.0(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.0)(@nestjs/platform-socket.io@12.2.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@prisma/client':
+        specifier: 5.22.0
+        version: 5.22.0(prisma@5.22.0)
+      bcryptjs:
+        specifier: ^3.0.3
+        version: 3.0.3
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.2
+        version: 0.14.4
+      pg:
+        specifier: ^8.16.0
+        version: 8.23.1
+      pino:
+        specifier: ^9.6.0
+        version: 9.14.0
+      pino-http:
+        specifier: ^10.3.0
+        version: 10.5.0
+      pino-pretty:
+        specifier: ^13.0.0
+        version: 13.2.0
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      rxjs:
+        specifier: ^7.8.1
+        version: 7.8.2
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@nestjs/cli':
+        specifier: ^12.0.10
+        version: 12.0.10(@types/node@22.20.5)
+      '@nestjs/testing':
+
+[TRUNCATED] Showing first 80 of 3957 lines.
+
+=== ENTRY POINTS ===
+No common entry points found. Check 'main' or 'scripts.start' in manifest files above.
+
+=== LINTING AND FORMATTING CONFIG ===
+No linting or formatting config files found in project root.
+
+=== ENVIRONMENT VARIABLE TEMPLATES ===
+--- .env.example ---
+NODE_ENV=development
+PORT=4000
+DATABASE_URL=postgres://mishwar:mishwar_dev_only@localhost:5432/mishwar
+DATABASE_TEST_URL=postgres://mishwar:mishwar_test_only@localhost:5433/mishwar_test
+JWT_ACCESS_SECRET=dev-only-change-me-in-production
+JWT_REFRESH_SECRET=dev-only-change-me-in-production
+START_CODE_SECRET=dev-only-start-code-secret-change-me
+OTP_PROVIDER=console
+OTP_DEV_DISPLAY=false
+REDIS_URL=redis://localhost:6379
+S3_ENDPOINT=
+S3_BUCKET=
+S3_ACCESS_KEY=
+S3_SECRET_KEY=
+FCM_PROJECT_ID=
+FCM_CREDENTIALS=
+MAP_PROVIDER=stub
+MAP_API_KEY=
+CORS_ORIGIN=http://localhost:3000,http://localhost:19006
+
+
+=== TODO / FIXME / HACK (production code only, test dirs excluded) ===
+.agents/skills/code-tour/scripts/generate_from_docs.py:100: "description": f"[TODO: {hint}]",
+.agents/skills/code-tour/scripts/generate_from_docs.py:107: "title": f"[TODO: title for {path}]",
+.agents/skills/code-tour/scripts/generate_from_docs.py:108: "description": f"[TODO: {hint or 'explain this file for the persona'}]",
+.agents/skills/code-tour/scripts/generate_from_docs.py:116: "title": f"[TODO: title for {path}/]",
+.agents/skills/code-tour/scripts/generate_from_docs.py:117: "description": f"[TODO: {hint or 'explain what lives here'}]",
+.agents/skills/code-tour/scripts/generate_from_docs.py:125: "description": "[TODO: explain why this link is relevant and what the reader should notice]",
+.agents/skills/code-tour/scripts/generate_from_docs.py:236: "title": f"[TODO: descriptive title for {persona} tour]",
+.agents/skills/code-tour/scripts/generate_from_docs.py:237: "description": f"[TODO: one sentence — who this is for and what they'll understand]",
+.agents/skills/code-tour/scripts/generate_from_docs.py:240: "This is a skeleton. Fill in every [TODO: ...] with real content. "
+.agents/skills/code-tour/scripts/generate_from_docs.py:280: print(f"   Fill in all [TODO: ...] entries before sharing")
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:28: TODO_LIMIT = 60
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:291: """Search for TODO/FIXME/HACK comments."""
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:291: """Search for TODO/FIXME/HACK comments."""
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:291: """Search for TODO/FIXME/HACK comments."""
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:293: patterns = ["TODO", "FIXME", "HACK"]
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:293: patterns = ["TODO", "FIXME", "HACK"]
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:293: patterns = ["TODO", "FIXME", "HACK"]
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:320: return todos[:TODO_LIMIT]
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:617: # TODOs
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:620: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", todos, output_file)
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:620: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", todos, output_file)
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:620: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", todos, output_file)
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:622: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", ["None found."], output_file)
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:622: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", ["None found."], output_file)
+.agents/skills/acquire-codebase-knowledge/scripts/scan.py:622: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", ["None found."], output_file)
+
+=== GIT RECENT COMMITS (last 20) ===
+28b9797 Merge pull request #3 from barakanid96/feat/api-go-backend
+a8ffde5 Remove temporary pnpm lockfile generation workflow
+21d78f9 Use committed pnpm lockfile in PostgreSQL CI
+9a2a270 Use committed pnpm lockfile in application CI
+b70676d chore: add generated pnpm lockfile
+fec1d99 Fix generated pnpm lockfile commit detection
+d573e08 Temporarily generate and commit pnpm lockfile
+fbb081e Deduplicate pnpm workflow path filters
+0465ba7 Remove standalone Flutter APK workflow triggers
+c6f6051 Deduplicate pnpm workflow path filters
+394e725 Trigger pnpm integration CI on workspace changes
+8610231 Use pnpm for all API workspace CI jobs
+b71afee Use pnpm for PostgreSQL integration workflow
+57fe96c Use pnpm workspace in application CI
+36d0f25 Add pnpm workspace configuration
+4194968 Configure pnpm workspace scripts
+5ee073b test: make API integration checks independent of seed data
+716e79b ci: provide PostgreSQL to API integration tests
+25a02d3 fix(api): point Prisma generation to schema path
+a3f92de build(driver): meet Flutter Kotlin minimum version
+
+=== HIGH-CHURN FILES (last 90 days, top 20) ===
+   9 api_go/README.md
+   8 .github/workflows/application-ci.yml
+   7 apps/api/src/modules/dispatch/dispatch.service.ts
+   7 api_go/internal/httpapi/auth_handlers_test.go
+   6 api_go/internal/httpapi/auth_handlers.go
+   6 api_go/internal/modules/identity/adapters/postgres/otp_request_limiter_test.go
+   6 api_go/internal/modules/identity/adapters/postgres/refresh_token_repository.go
+   5 .github/workflows/postgres-concurrency.yml
+   5 .github/workflows/build-flutter-apk.yml
+   5 apps/api/package.json
+   5 apps/rider_app/lib/ui/core/app_theme.dart
+   5 apps/api/src/modules/ride-requests/ride-requests.service.ts
+   5 apps/driver_app/lib/ui/core/app_theme.dart
+   5 api_go/internal/modules/identity/service/otp_service_test.go
+   5 api_go/internal/modules/identity/service/refresh_token_service.go
+   4 apps/driver_app/android/settings.gradle.kts
+   4 apps/api/src/main.ts
+   4 apps/api/src/concurrency_scenarios.ts
+   4 api_go/internal/httpapi/router.go
+   4 apps/driver_app/lib/app_router.dart
+
+=== MONOREPO SIGNALS ===
+Monorepo tool detected: pnpm-workspace.yaml
+Sub-package directory found: apps/
+package.json has 'workspaces' field (npm/yarn workspaces monorepo)
+
+=== CODE METRICS ===
+Total files scanned: 2532
+Total lines of code: 71681
+
+Files by language:
+  Other: 2292
+  TypeScript: 112
+  Python: 47
+  TypeScript/React: 35
+  Go: 32
+  JavaScript: 4
+  JavaScript/React: 3
+  C#: 3
+  Java: 2
+  Kotlin: 2
+
+Top 10 largest files:
+.agents/skills/azure-architecture-autopilot/scripts/icons.py: 2094.5KB
+.agents/skills/tm7-threat-model/assets/example-minimal.tm7: 1085.3KB
+.agents/skills/azure-architecture-autopilot/assets/06-architecture-diagram.png: 326.8KB
+.agents/skills/geofeed-tuner/assets/iso3166-2.json: 313.2KB
+.agents/skills/quality-playbook/SKILL.md: 287.5KB
+.agents/skills/azure-architecture-autopilot/assets/07-azure-portal-resources.png: 171.4KB
+skills-lock.json: 154.6KB
+.agents/skills/azure-architecture-autopilot/scripts/generator.py: 137.2KB
+pnpm-lock.yaml: 129.7KB
+.agents/skills/quality-playbook/quality_gate.py: 128.4KB
+
+=== CI/CD PIPELINES ===
+CI/CD: GitHub Actions
+
+=== CONTAINERS & ORCHESTRATION ===
+No containerization configs detected.
+
+=== SECURITY & COMPLIANCE ===
+No security configs detected.
+
+=== PERFORMANCE & TESTING ===
+No performance testing configs detected.
+
+=== SCAN COMPLETE ===

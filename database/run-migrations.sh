@@ -5,7 +5,17 @@
 # so a failed migration leaves no partial state and no version record.
 set -euo pipefail
 
-: "${DATABASE_URL:?DATABASE_URL is required}"
+# Load repo-root .env if present, but never override an explicitly-provided DATABASE_URL.
+# (pnpm and plain bash do not auto-source .env, unlike Nest's ConfigModule.)
+ENV_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.env"
+if [ -z "${DATABASE_URL:-}" ] && [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
+: "${DATABASE_URL:?DATABASE_URL is required (set it or provide a repo-root .env)}"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/migrations"
 
 psql_run() { psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X -q "$@"; }

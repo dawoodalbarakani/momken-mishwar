@@ -1,181 +1,179 @@
 
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/repositories/ride_repository.dart';
 import '../../../../domain/models/ride.dart';
 
-class RideTrackingViewModel extends ChangeNotifier {
-  RideTrackingViewModel({
-    required RideRepository rideRepository,
-    required this.rideId,
-  }) : _rideRepository = rideRepository {
+class RideTrackingState {
+  const RideTrackingState({
+    this.status = RideStatus.assigned,
+    this.pickup,
+    this.destination,
+    this.customerName,
+    this.customerPhone,
+    this.startCode,
+    this.verifiedAssignment = false,
+    this.started = false,
+    this.completed = false,
+    this.cancellation,
+    this.isConnected = false,
+    this.isLoading = true,
+    this.error,
+  });
+
+  final RideStatus status;
+  final String? pickup;
+  final String? destination;
+  final String? customerName;
+  final String? customerPhone;
+  final String? startCode;
+  final bool verifiedAssignment;
+  final bool started;
+  final bool completed;
+  final RideCancellation? cancellation;
+  final bool isConnected;
+  final bool isLoading;
+  final String? error;
+
+  bool get canStart => verifiedAssignment && !started && status == RideStatus.assigned;
+  bool get canComplete => started && status == RideStatus.inProgress && !completed;
+
+  RideTrackingState copyWith({
+    RideStatus? status,
+    String? pickup,
+    String? destination,
+    String? customerName,
+    String? customerPhone,
+    String? startCode,
+    bool? verifiedAssignment,
+    bool? started,
+    bool? completed,
+    RideCancellation? cancellation,
+    bool? isConnected,
+    bool? isLoading,
+    String? error,
+    bool clearError = false,
+  }) {
+    return RideTrackingState(
+      status: status ?? this.status,
+      pickup: pickup ?? this.pickup,
+      destination: destination ?? this.destination,
+      customerName: customerName ?? this.customerName,
+      customerPhone: customerPhone ?? this.customerPhone,
+      startCode: startCode ?? this.startCode,
+      verifiedAssignment: verifiedAssignment ?? this.verifiedAssignment,
+      started: started ?? this.started,
+      completed: completed ?? this.completed,
+      cancellation: cancellation ?? this.cancellation,
+      isConnected: isConnected ?? this.isConnected,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
+}
+
+class RideTrackingNotifier extends FamilyNotifier<RideTrackingState, String> {
+  @override
+  RideTrackingState build() {
+    // First state write happens after an await, so this is safe to fire here.
     _restore();
+    return const RideTrackingState();
   }
 
-  final RideRepository _rideRepository;
-  final String rideId;
-
-  RideStatus _status = RideStatus.assigned;
-  RideStatus get status => _status;
-
-  String? _pickup;
-  String? get pickup => _pickup;
-
-  String? _destination;
-  String? get destination => _destination;
-
-  String? _customerName;
-  String? get customerName => _customerName;
-
-  String? _customerPhone;
-  String? get customerPhone => _customerPhone;
-
-  String? _startCode;
-  String? get startCode => _startCode;
-
-  bool _verifiedAssignment = false;
-  bool get verifiedAssignment => _verifiedAssignment;
-
-  bool _started = false;
-  bool get started => _started;
-
-  bool _completed = false;
-  bool get completed => _completed;
-
-  RideCancellation? _cancellation;
-  RideCancellation? get cancellation => _cancellation;
-
-  final bool _isConnected = false;
-  bool get isConnected => _isConnected;
-
-  bool _isLoading = true;
-  bool get isLoading => _isLoading;
-
-  String? _error;
-  String? get error => _error;
-
-  bool get canStart => _verifiedAssignment && !_started && _status == RideStatus.assigned;
-  bool get canComplete => _started && _status == RideStatus.inProgress && !_completed;
-
-  StreamSubscription? _wsSubscription;
+  RideRepository get _rideRepository => ref.read(rideRepositoryProvider);
 
   Future<void> _restore() async {
     try {
-      final ride = await _rideRepository.getRide(rideId);
-      _status = ride.status;
-      _pickup = ride.pickup;
-      _destination = ride.destination;
-      _customerName = ride.customerName;
-      _customerPhone = ride.customerPhone;
-      _startCode = ride.startCode;
-      _verifiedAssignment = ride.verifiedAssignment;
+      final ride = await _rideRepository.getRide(args);
+      state = state.copyWith(
+        status: ride.status,
+        pickup: ride.pickup,
+        destination: ride.destination,
+        customerName: ride.customerName,
+        customerPhone: ride.customerPhone,
+        startCode: ride.startCode,
+        verifiedAssignment: ride.verifiedAssignment,
+        isLoading: false,
+      );
     } catch (e) {
-      _error = 'فشل استعادة حالة الرحلة';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      state = state.copyWith(isLoading: false, error: 'فشل استعادة حالة الرحلة');
     }
   }
 
   Future<bool> verifyAssignment() async {
     try {
-      final ok = await _rideRepository.verifyAssignment(rideId);
-      _verifiedAssignment = ok;
-      notifyListeners();
+      final ok = await _rideRepository.verifyAssignment(args);
+      state = state.copyWith(verifiedAssignment: ok);
       return ok;
     } catch (e) {
-      _error = 'فشل التحقق من الإسناد';
-      notifyListeners();
+      state = state.copyWith(error: 'فشل التحقق من الإسناد');
       return false;
     }
   }
 
   Future<bool> startRide(String enteredStartCode) async {
-    if (!_verifiedAssignment) {
-      _error = 'يجب التحقق من إسناد الرحلة أولاً';
-      notifyListeners();
+    if (!state.verifiedAssignment) {
+      state = state.copyWith(error: 'يجب التحقق من إسناد الرحلة أولاً');
       return false;
     }
-    if (_startCode == null) {
-      _error = 'رمز بدء الرحلة غير متوفر من الخادم';
-      notifyListeners();
+    if (state.startCode == null) {
+      state = state.copyWith(error: 'رمز بدء الرحلة غير متوفر من الخادم');
       return false;
     }
-    if (enteredStartCode.trim() != _startCode) {
-      _error = 'رمز بدء الرحلة غير صحيح';
-      notifyListeners();
+    if (enteredStartCode.trim() != state.startCode) {
+      state = state.copyWith(error: 'رمز بدء الرحلة غير صحيح');
       return false;
     }
     try {
-      final ok = await _rideRepository.startRide(rideId, startCode: enteredStartCode.trim());
+      final ok = await _rideRepository.startRide(args, startCode: enteredStartCode.trim());
       if (ok) {
-        _started = true;
-        _status = RideStatus.inProgress;
-        notifyListeners();
+        state = state.copyWith(started: true, status: RideStatus.inProgress);
       }
       return ok;
     } catch (e) {
-      _error = 'فشل بدء الرحلة';
-      notifyListeners();
+      state = state.copyWith(error: 'فشل بدء الرحلة');
       return false;
     }
   }
 
   Future<bool> completeRide() async {
-    if (!canComplete) {
-      _error = 'لا يمكن إنهاء الرحلة في الحالة الحالية';
-      notifyListeners();
+    if (!state.canComplete) {
+      state = state.copyWith(error: 'لا يمكن إنهاء الرحلة في الحالة الحالية');
       return false;
     }
     try {
-      final ok = await _rideRepository.completeRide(rideId);
+      final ok = await _rideRepository.completeRide(args);
       if (ok) {
-        _status = RideStatus.completed;
-        _completed = true;
-        notifyListeners();
+        state = state.copyWith(status: RideStatus.completed, completed: true);
       }
       return ok;
     } catch (e) {
-      _error = 'فشل إنهاء الرحلة';
-      notifyListeners();
+      state = state.copyWith(error: 'فشل إنهاء الرحلة');
       return false;
     }
   }
 
   Future<bool> cancelRide({required String reason, required String actor}) async {
-    if (_status == RideStatus.completed || _status == RideStatus.cancelled) {
-      _error = 'الرحلة مكتملة أو ملغاة مسبقاً';
-      notifyListeners();
+    if (state.status == RideStatus.completed || state.status == RideStatus.cancelled) {
+      state = state.copyWith(error: 'الرحلة مكتملة أو ملغاة مسبقاً');
       return false;
     }
     try {
-      final ok = await _rideRepository.cancelRide(rideId, reason: reason, actor: actor);
+      final ok = await _rideRepository.cancelRide(args, reason: reason, actor: actor);
       if (ok) {
-        _status = RideStatus.cancelled;
-        _cancellation = RideCancellation(reason: reason, actor: actor, cancelledAt: DateTime.now());
-        notifyListeners();
+        state = state.copyWith(
+          status: RideStatus.cancelled,
+          cancellation: RideCancellation(reason: reason, actor: actor, cancelledAt: DateTime.now()),
+        );
       }
       return ok;
     } catch (e) {
-      _error = 'فشل إلغاء الرحلة';
-      notifyListeners();
+      state = state.copyWith(error: 'فشل إلغاء الرحلة');
       return false;
     }
-  }
-
-  @override
-  void dispose() {
-    _wsSubscription?.cancel();
-    super.dispose();
   }
 }
 
 final rideTrackingViewModelProvider =
-    ChangeNotifierProvider.family<RideTrackingViewModel, String>(
-  (ref, rideId) => RideTrackingViewModel(
-    rideRepository: ref.read(rideRepositoryProvider),
-    rideId: rideId,
-  ),
+    NotifierProvider.family<RideTrackingNotifier, RideTrackingState, String>(
+  RideTrackingNotifier.new,
 );

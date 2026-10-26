@@ -1,78 +1,45 @@
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/repositories/earnings_repository.dart';
 import '../../../../domain/models/earnings.dart';
 
-class EarningsViewModel extends ChangeNotifier {
-  EarningsViewModel({required EarningsRepository earningsRepository}) : _earningsRepository = earningsRepository {
-    fetchEarnings();
+class EarningsNotifier extends Notifier<EarningsState> {
+  @override
+  EarningsState build() {
+    // Deferred to the event loop: state cannot be written during build().
+    Future(() => fetchEarnings());
+    return const EarningsState(isLoading: true);
   }
 
-  final EarningsRepository _earningsRepository;
-
-  List<CompletedRide> _completedRides = const [];
-  List<CompletedRide> get completedRides => _completedRides;
-
-  double _totalFare = 0;
-  double get totalFare => _totalFare;
-
-  double _platformCommission = 0;
-  double get platformCommission => _platformCommission;
-
-  double _netPayable = 0;
-  double get netPayable => _netPayable;
-
-  double _cashCollected = 0;
-  double get cashCollected => _cashCollected;
-
-  double _platformReceivables = 0;
-  double get platformReceivables => _platformReceivables;
-
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
-
-  String? _error;
-  String? get error => _error;
-
   Future<void> fetchEarnings() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final state = await _earningsRepository.fetchEarnings();
-      _completedRides = state.completedRides;
-      _totalFare = state.totalFare;
-      _platformCommission = state.platformCommission;
-      _netPayable = state.netPayable;
-      _cashCollected = state.cashCollected;
-      _platformReceivables = state.platformReceivables;
+      final result = await ref.read(earningsRepositoryProvider).fetchEarnings();
+      state = EarningsState(
+        completedRides: result.completedRides,
+        totalFare: result.totalFare,
+        platformCommission: result.platformCommission,
+        netPayable: result.netPayable,
+        cashCollected: result.cashCollected,
+        platformReceivables: result.platformReceivables,
+      );
     } catch (e) {
-      _error = 'فشل جلب الأرباح';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      state = state.copyWith(isLoading: false, error: 'فشل جلب الأرباح');
     }
   }
 
   Future<bool> requestPayout(double amount) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final ok = await _earningsRepository.requestPayout(amount);
-      _isLoading = false;
-      notifyListeners();
+      final ok = await ref.read(earningsRepositoryProvider).requestPayout(amount);
+      state = state.copyWith(isLoading: false);
       return ok;
     } catch (e) {
-      _isLoading = false;
-      _error = 'فشل إرسال طلب التسوية';
-      notifyListeners();
+      state = state.copyWith(isLoading: false, error: 'فشل إرسال طلب التسوية');
       return false;
     }
   }
 }
 
-final earningsViewModelProvider = ChangeNotifierProvider(
-  (ref) => EarningsViewModel(earningsRepository: ref.read(earningsRepositoryProvider)),
-);
+final earningsViewModelProvider =
+    NotifierProvider<EarningsNotifier, EarningsState>(EarningsNotifier.new);

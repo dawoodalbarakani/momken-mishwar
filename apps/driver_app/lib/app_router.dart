@@ -63,12 +63,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _initializeSession() async {
-    final auth = ref.read(authViewModelProvider);
     try {
-      final authenticated = await auth.initialize();
+      final authenticated = await ref.read(authViewModelProvider.notifier).initialize();
       if (!mounted) return;
       if (authenticated) {
-        context.go(auth.isApproved ? '/home' : '/documents');
+        context.go(ref.read(authViewModelProvider).isApproved ? '/home' : '/documents');
       } else {
         context.go('/login');
       }
@@ -104,7 +103,7 @@ class ProfileScreen extends ConsumerWidget {
               height: 48,
               child: OutlinedButton(
                 onPressed: () async {
-                  await auth.logout();
+                  await ref.read(authViewModelProvider.notifier).logout();
                   if (context.mounted) context.go('/login');
                 },
                 child: const Text('تسجيل الخروج'),

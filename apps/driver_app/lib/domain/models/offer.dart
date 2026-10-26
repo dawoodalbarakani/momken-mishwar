@@ -23,4 +23,17 @@ class Offer {
   final OfferStatus status;
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
+
+  Offer copyWith({OfferStatus? status}) {
+    return Offer(
+      offerId: offerId,
+      rideId: rideId,
+      pickup: pickup,
+      destination: destination,
+      fare: fare,
+      distanceMeters: distanceMeters,
+      expiresAt: expiresAt,
+      status: status ?? this.status,
+    );
+  }
 }

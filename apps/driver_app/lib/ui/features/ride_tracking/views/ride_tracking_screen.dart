@@ -21,108 +21,106 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
     super.dispose();
   }
 
+  RideTrackingNotifier get _notifier =>
+      ref.read(rideTrackingViewModelProvider(widget.rideId).notifier);
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(rideTrackingViewModelProvider(widget.rideId));
-    return ListenableBuilder(
-      listenable: vm,
-      builder: (context, _) {
-        return Scaffold(
-          appBar: AppBar(title: Text('تتبع الرحلة ${widget.rideId}')),
-          body: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Scaffold(
+      appBar: AppBar(title: Text('تتبع الرحلة ${widget.rideId}')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('الحالة: ${_label(vm.status)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    if (vm.pickup != null) Text('نقطة الالتقاط: ${vm.pickup}'),
+                    if (vm.destination != null) Text('الوجهة: ${vm.destination}'),
+                    if (vm.customerName != null) Text('الراكب: ${vm.customerName}'),
+                    const SizedBox(height: 12),
+                    Row(
                       children: [
-                        Text('الحالة: ${_label(vm.status)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        if (vm.pickup != null) Text('نقطة الالتقاط: ${vm.pickup}'),
-                        if (vm.destination != null) Text('الوجهة: ${vm.destination}'),
-                        if (vm.customerName != null) Text('الراكب: ${vm.customerName}'),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Text('بيانات الموقع: '),
-                            Text(vm.isConnected ? 'مباشر' : 'غير متصل', style: TextStyle(color: vm.isConnected ? Colors.green : Colors.orange)),
-                          ],
-                        ),
-                        if (vm.cancellation != null) ...[
-                          const SizedBox(height: 12),
-                          Text('تم الإلغاء: ${vm.cancellation!.reason} (${vm.cancellation!.actor})', style: const TextStyle(color: Colors.red)),
-                        ],
+                        const Text('بيانات الموقع: '),
+                        Text(vm.isConnected ? 'مباشر' : 'غير متصل', style: TextStyle(color: vm.isConnected ? Colors.green : Colors.orange)),
                       ],
                     ),
-                  ),
+                    if (vm.cancellation != null) ...[
+                      const SizedBox(height: 12),
+                      Text('تم الإلغاء: ${vm.cancellation!.reason} (${vm.cancellation!.actor})', style: const TextStyle(color: Colors.red)),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 16),
-                if (!vm.verifiedAssignment)
-                  SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: vm.isLoading ? null : () async {
-                        final ok = await vm.verifyAssignment();
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(ok ? 'تم التحقق من إسناد الرحلة' : 'فشل التحقق من الإسناد')),
-                        );
-                      },
-                      child: const Text('تحقق من إسناد الرحلة'),
-                    ),
-                  ),
-                if (vm.verifiedAssignment && !vm.started) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _startCodeController,
-                    decoration: const InputDecoration(labelText: 'أدخل رمز بدء الرحلة', hintText: 'أرقام الرمز'),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: vm.isLoading ? null : () => vm.startRide(_startCodeController.text),
-                      child: const Text('بدء الرحلة'),
-                    ),
-                  ),
-                ],
-                if (vm.started && !vm.completed) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: vm.isLoading ? null : () => vm.completeRide(),
-                      child: const Text('إنهاء الرحلة'),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 48,
-                  child: OutlinedButton(
-                    onPressed: vm.isLoading ? null : () => _showCancelDialog(context, vm),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                    child: const Text('إلغاء الرحلة'),
-                  ),
-                ),
-                if (vm.error != null) ...[
-                  const SizedBox(height: 8),
-                  Text(vm.error!, style: const TextStyle(color: Colors.red)),
-                ],
-              ],
+              ),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 16),
+            if (!vm.verifiedAssignment)
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: vm.isLoading ? null : () async {
+                    final ok = await _notifier.verifyAssignment();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(ok ? 'تم التحقق من إسناد الرحلة' : 'فشل التحقق من الإسناد')),
+                    );
+                  },
+                  child: const Text('تحقق من إسناد الرحلة'),
+                ),
+              ),
+            if (vm.verifiedAssignment && !vm.started) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _startCodeController,
+                decoration: const InputDecoration(labelText: 'أدخل رمز بدء الرحلة', hintText: 'أرقام الرمز'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: vm.isLoading ? null : () => _notifier.startRide(_startCodeController.text),
+                  child: const Text('بدء الرحلة'),
+                ),
+              ),
+            ],
+            if (vm.started && !vm.completed) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: vm.isLoading ? null : () => _notifier.completeRide(),
+                  child: const Text('إنهاء الرحلة'),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 48,
+              child: OutlinedButton(
+                onPressed: vm.isLoading ? null : () => _showCancelDialog(context),
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('إلغاء الرحلة'),
+              ),
+            ),
+            if (vm.error != null) ...[
+              const SizedBox(height: 8),
+              Text(vm.error!, style: const TextStyle(color: Colors.red)),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
-  void _showCancelDialog(BuildContext context, RideTrackingViewModel vm) {
+  void _showCancelDialog(BuildContext context) {
     final controller = TextEditingController();
     showDialog(
       context: context,
@@ -134,7 +132,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              vm.cancelRide(reason: controller.text.trim(), actor: 'driver');
+              _notifier.cancelRide(reason: controller.text.trim(), actor: 'driver');
             },
             child: const Text('تأكيد الإلغاء'),
           ),

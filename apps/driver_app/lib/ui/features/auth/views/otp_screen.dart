@@ -59,90 +59,82 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       return;
     }
     setState(() => _verifying = true);
-    final vm = ref.read(authViewModelProvider);
-    final ok = await vm.verifyOtp(widget.phone, _otp);
+    final ok = await ref.read(authViewModelProvider.notifier).verifyOtp(widget.phone, _otp);
     setState(() => _verifying = false);
     if (ok && mounted) {
-      if (vm.isApproved) {
+      if (ref.read(authViewModelProvider).isApproved) {
         context.go('/home');
       } else {
         context.go('/documents');
       }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(vm.error ?? 'رمز التحقق غير صحيح')),
+        SnackBar(content: Text(ref.read(authViewModelProvider).error ?? 'رمز التحقق غير صحيح')),
       );
     }
   }
 
   Future<void> _resend() async {
     if (_resendSeconds > 0) return;
-    final vm = ref.read(authViewModelProvider);
-    final ok = await vm.requestOtp(widget.phone);
+    final ok = await ref.read(authViewModelProvider.notifier).requestOtp(widget.phone);
     if (ok && mounted) {
       _startResendTimer();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أُعيد إرسال الرمز')));
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(vm.error ?? 'فشل إعادة الإرسال')),
+        SnackBar(content: Text(ref.read(authViewModelProvider).error ?? 'فشل إعادة الإرسال')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = ref.read(authViewModelProvider);
-    return ListenableBuilder(
-      listenable: vm,
-      builder: (context, _) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('التحقق من الرمز')),
-          body: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('أدخل الرمز المكون من ${AppConstants.otpLength} أرقام المرسل إلى ${widget.phone}'),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: List.generate(6, (i) {
-                    return SizedBox(
-                      width: 48,
-                      child: TextField(
-                        controller: _controllers[i],
-                        focusNode: _focusNodes[i],
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        maxLength: 1,
-                        onChanged: (v) {
-                          _focusNodes[i + 1 < 6 ? i + 1 : i].requestFocus();
-                        },
-                        decoration: const InputDecoration(counterText: ''),
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _verifying ? null : _verify,
-                    child: _verifying
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('تحقق'),
+    return Scaffold(
+      appBar: AppBar(title: const Text('التحقق من الرمز')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('أدخل الرمز المكون من ${AppConstants.otpLength} أرقام المرسل إلى ${widget.phone}'),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(6, (i) {
+                return SizedBox(
+                  width: 48,
+                  child: TextField(
+                    controller: _controllers[i],
+                    focusNode: _focusNodes[i],
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    maxLength: 1,
+                    onChanged: (v) {
+                      _focusNodes[i + 1 < 6 ? i + 1 : i].requestFocus();
+                    },
+                    decoration: const InputDecoration(counterText: ''),
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: _resendSeconds > 0 ? null : _resend,
-                  child: Text(_resendSeconds > 0 ? 'إعادة الإرسال بعد $_resendSeconds ث' : 'إعادة الإرسال'),
-                ),
-              ],
+                );
+              }),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _verifying ? null : _verify,
+                child: _verifying
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('تحقق'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: _resendSeconds > 0 ? null : _resend,
+              child: Text(_resendSeconds > 0 ? 'إعادة الإرسال بعد $_resendSeconds ث' : 'إعادة الإرسال'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

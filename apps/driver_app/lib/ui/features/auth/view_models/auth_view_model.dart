@@ -1,64 +1,87 @@
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/repositories/auth_repository.dart';
 import '../../../../domain/models/auth_user.dart';
 
-class AuthViewModel extends ChangeNotifier {
-  AuthViewModel({required AuthRepository authRepository}) : _authRepository = authRepository;
+class AuthState {
+  const AuthState({
+    this.user,
+    this.token,
+    this.isLoading = false,
+    this.error,
+  });
 
-  final AuthRepository _authRepository;
+  final AuthUser? user;
+  final String? token;
+  final bool isLoading;
+  final String? error;
 
-  AuthUser? _user;
-  AuthUser? get user => _user;
+  bool get isAuthenticated => token != null && token!.isNotEmpty;
+  bool get isApproved => user?.verificationStatus == VerificationStatus.approved;
 
-  String? _token;
-  String? get token => _token;
+  AuthState copyWith({
+    AuthUser? user,
+    String? token,
+    bool? isLoading,
+    String? error,
+    bool clearSession = false,
+    bool clearError = false,
+  }) {
+    return AuthState(
+      user: clearSession ? null : (user ?? this.user),
+      token: clearSession ? null : (token ?? this.token),
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
+}
 
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
+class AuthNotifier extends Notifier<AuthState> {
+  @override
+  AuthState build() => const AuthState();
 
-  String? _error;
-  String? get error => _error;
-
-  bool get isAuthenticated => _token != null && _token!.isNotEmpty;
-  bool get isApproved => _user?.verificationStatus == VerificationStatus.approved;
+  AuthRepository get _authRepository => ref.read(authRepositoryProvider);
 
   Future<bool> initialize() async {
-    _setLoading(true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      _token = await _authRepository.accessToken;
-      if (_token != null && _token!.isNotEmpty) {
-        _user = await _authRepository.loadMe();
+      final token = await _authRepository.accessToken;
+      if (token != null && token.isNotEmpty) {
+        final user = await _authRepository.loadMe();
+        state = state.copyWith(token: token, user: user, isLoading: false);
+        return true;
       }
+      state = state.copyWith(isLoading: false);
+      return false;
     } finally {
-      _setLoading(false);
+      state = state.copyWith(isLoading: false);
     }
-    return isAuthenticated;
   }
 
   Future<bool> requestOtp(String phone) async {
-    _setLoading(true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       final ok = await _authRepository.requestOtp(phone);
-      _setLoading(false);
+      state = state.copyWith(isLoading: false);
       return ok;
     } catch (e) {
-      _setLoading(false, error: 'فشل طلب رمز التحقق');
+      state = state.copyWith(isLoading: false, error: 'فشل طلب رمز التحقق');
       return false;
     }
   }
 
   Future<bool> verifyOtp(String phone, String otp) async {
-    _setLoading(true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       final result = await _authRepository.verifyOtp(phone, otp);
-      _token = result.accessToken;
-      _user = result.user;
-      _setLoading(false);
+      state = state.copyWith(
+        token: result.accessToken,
+        user: result.user,
+        isLoading: false,
+      );
       return true;
     } catch (e) {
-      _setLoading(false, error: 'فشل التحقق من الرمز');
+      state = state.copyWith(isLoading: false, error: 'فشل التحقق من الرمز');
       return false;
     }
   }
@@ -71,7 +94,7 @@ class AuthViewModel extends ChangeNotifier {
     required String nationalId,
     required String licenseNumber,
   }) async {
-    _setLoading(true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       final ok = await _authRepository.registerDriver(
         name: name,
@@ -81,29 +104,18 @@ class AuthViewModel extends ChangeNotifier {
         nationalId: nationalId,
         licenseNumber: licenseNumber,
       );
-      _setLoading(false);
+      state = state.copyWith(isLoading: false);
       return ok;
     } catch (e) {
-      _setLoading(false, error: 'فشل تسجيل السائق');
+      state = state.copyWith(isLoading: false, error: 'فشل تسجيل السائق');
       return false;
     }
   }
 
   Future<void> logout() async {
     await _authRepository.logout();
-    _token = null;
-    _user = null;
-    _error = null;
-    notifyListeners();
-  }
-
-  void _setLoading(bool loading, {String? error}) {
-    _isLoading = loading;
-    if (error != null) _error = error;
-    notifyListeners();
+    state = const AuthState();
   }
 }
 
-final authViewModelProvider = ChangeNotifierProvider(
-  (ref) => AuthViewModel(authRepository: ref.read(authRepositoryProvider)),
-);
+final authViewModelProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);

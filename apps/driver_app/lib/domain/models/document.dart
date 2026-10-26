@@ -53,7 +53,22 @@ class DocumentsState {
   final String? error;
   final bool submitting;
 
-  VerificationStatus? overallStatus() {
+  DocumentsState copyWith({
+    Map<DocumentType, DriverDocument>? documents,
+    bool? isLoading,
+    String? error,
+    bool? submitting,
+    bool clearError = false,
+  }) {
+    return DocumentsState(
+      documents: documents ?? this.documents,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+      submitting: submitting ?? this.submitting,
+    );
+  }
+
+  VerificationStatus? get overallStatus {
     final statuses = documents.values.map((d) => d.status).toSet();
     if (statuses.contains(VerificationStatus.rejected)) return VerificationStatus.rejected;
     if (statuses.contains(VerificationStatus.suspended)) return VerificationStatus.suspended;

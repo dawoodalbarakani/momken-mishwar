@@ -37,4 +37,27 @@ class EarningsState {
   final double platformReceivables;
   final bool isLoading;
   final String? error;
+
+  EarningsState copyWith({
+    List<CompletedRide>? completedRides,
+    double? totalFare,
+    double? platformCommission,
+    double? netPayable,
+    double? cashCollected,
+    double? platformReceivables,
+    bool? isLoading,
+    String? error,
+    bool clearError = false,
+  }) {
+    return EarningsState(
+      completedRides: completedRides ?? this.completedRides,
+      totalFare: totalFare ?? this.totalFare,
+      platformCommission: platformCommission ?? this.platformCommission,
+      netPayable: netPayable ?? this.netPayable,
+      cashCollected: cashCollected ?? this.cashCollected,
+      platformReceivables: platformReceivables ?? this.platformReceivables,
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
 }

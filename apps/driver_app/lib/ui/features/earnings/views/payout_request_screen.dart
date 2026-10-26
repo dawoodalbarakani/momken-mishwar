@@ -28,12 +28,11 @@ class _PayoutRequestScreenState extends ConsumerState<PayoutRequestScreen> {
       return;
     }
     setState(() => _submitting = true);
-    final vm = ref.read(earningsViewModelProvider);
-    vm.requestPayout(amount).then((ok) {
+    ref.read(earningsViewModelProvider.notifier).requestPayout(amount).then((ok) {
       if (!mounted) return;
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ok ? 'تم إرسال طلب التسوية للمراجعة' : vm.error ?? 'فشل الإرسال')),
+        SnackBar(content: Text(ok ? 'تم إرسال طلب التسوية للمراجعة' : ref.read(earningsViewModelProvider).error ?? 'فشل الإرسال')),
       );
       if (ok) context.go('/earnings');
     });
@@ -42,42 +41,37 @@ class _PayoutRequestScreenState extends ConsumerState<PayoutRequestScreen> {
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(earningsViewModelProvider);
-    return ListenableBuilder(
-      listenable: vm,
-      builder: (context, _) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('طلب تسوية / نزاع مالي')),
-          body: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('اطلب مراجعة مبلغ أو تسجيل نزاع مالي على مستحقاتك.'),
-                const SizedBox(height: 16),
-                Text('صافي المستحقات المتاح: ${vm.netPayable.toStringAsFixed(0)} ريال', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: _amountController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'المبلغ المطلوب (ريال)', hintText: 'أدخل المبلغ'),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _submitting ? null : _request,
-                    child: _submitting
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('إرسال الطلب'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextButton(onPressed: () => context.go('/earnings'), child: const Text('العودة')),
-              ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('طلب تسوية / نزاع مالي')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('اطلب مراجعة مبلغ أو تسجيل نزاع مالي على مستحقاتك.'),
+            const SizedBox(height: 16),
+            Text('صافي المستحقات المتاح: ${vm.netPayable.toStringAsFixed(0)} ريال', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'المبلغ المطلوب (ريال)', hintText: 'أدخل المبلغ'),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _submitting ? null : _request,
+                child: _submitting
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('إرسال الطلب'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton(onPressed: () => context.go('/earnings'), child: const Text('العودة')),
+          ],
+        ),
+      ),
     );
   }
 }

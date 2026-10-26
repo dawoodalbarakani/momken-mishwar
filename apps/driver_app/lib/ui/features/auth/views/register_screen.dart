@@ -53,8 +53,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
     setState(() => _registering = true);
-    final vm = ref.read(authViewModelProvider);
-    final ok = await vm.registerDriver(
+    final ok = await ref.read(authViewModelProvider.notifier).registerDriver(
       name: _nameController.text.trim(),
       phone: phone,
       vehicleType: _vehicleTypeController.text.trim(),
@@ -67,53 +66,47 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       context.go('/login?phone=$phone');
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(vm.error ?? 'فشل التسجيل')),
+        SnackBar(content: Text(ref.read(authViewModelProvider).error ?? 'فشل التسجيل')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = ref.read(authViewModelProvider);
-    return ListenableBuilder(
-      listenable: vm,
-      builder: (context, _) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('تسجيل سائق جديد')),
-          body: Padding(
-            padding: const EdgeInsets.all(24),
-            child: ListView(
-              children: [
-                const Text('البيانات الأساسية للسائق'),
-                const SizedBox(height: 16),
-                TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'الاسم الكامل')),
-                const SizedBox(height: 12),
-                TextField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixText: '+967 ', hintText: '771234567')),
-                const SizedBox(height: 12),
-                TextField(controller: _vehicleTypeController, decoration: const InputDecoration(labelText: 'نوع المركبة')),
-                const SizedBox(height: 12),
-                TextField(controller: _plateController, decoration: const InputDecoration(labelText: 'لوحة المركبة')),
-                const SizedBox(height: 12),
-                TextField(controller: _nationalIdController, decoration: const InputDecoration(labelText: 'الرقم الوطني')),
-                const SizedBox(height: 12),
-                TextField(controller: _licenseController, decoration: const InputDecoration(labelText: 'رقم رخصة القيادة')),
-                const SizedBox(height: 24),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _registering ? null : _register,
-                    child: _registering
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('تسجيل'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextButton(onPressed: () => context.go('/login'), child: const Text('لديك حساب؟ تسجيل الدخول')),
-              ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('تسجيل سائق جديد')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ListView(
+          children: [
+            const Text('البيانات الأساسية للسائق'),
+            const SizedBox(height: 16),
+            TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'الاسم الكامل')),
+            const SizedBox(height: 12),
+            TextField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixText: '+967 ', hintText: '771234567')),
+            const SizedBox(height: 12),
+            TextField(controller: _vehicleTypeController, decoration: const InputDecoration(labelText: 'نوع المركبة')),
+            const SizedBox(height: 12),
+            TextField(controller: _plateController, decoration: const InputDecoration(labelText: 'لوحة المركبة')),
+            const SizedBox(height: 12),
+            TextField(controller: _nationalIdController, decoration: const InputDecoration(labelText: 'الرقم الوطني')),
+            const SizedBox(height: 12),
+            TextField(controller: _licenseController, decoration: const InputDecoration(labelText: 'رقم رخصة القيادة')),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _registering ? null : _register,
+                child: _registering
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('تسجيل'),
+              ),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 16),
+            TextButton(onPressed: () => context.go('/login'), child: const Text('لديك حساب؟ تسجيل الدخول')),
+          ],
+        ),
+      ),
     );
   }
 }
