@@ -13,8 +13,6 @@ on:
       - 'package-lock.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
       - '.github/workflows/**'
   pull_request:
     branches: [main, master]
