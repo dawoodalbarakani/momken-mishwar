@@ -11,6 +11,8 @@ on:
       - 'package-lock.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/postgres-concurrency.yml'
   pull_request:
     branches: [main, master]
@@ -19,6 +21,8 @@ on:
       - 'apps/api/src/concurrency_scenarios.ts'
       - 'apps/api/package.json'
       - 'package-lock.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/postgres-concurrency.yml'
   workflow_dispatch:
 
