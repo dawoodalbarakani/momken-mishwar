@@ -72,9 +72,6 @@ jobs:
         with:
           version: 10.18.3
 
-      - name: Import npm lockfile for pnpm
-        run: pnpm import
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -141,9 +138,6 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 10.18.3
-
-      - name: Import npm lockfile for pnpm
-        run: pnpm import
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
