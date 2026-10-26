@@ -359,7 +359,7 @@ async function scenario7(ids: Ids): Promise<Scenario> {
       await c.query(cleanupRideSql, [activeRideIds]);
     });
   }
-  return { name, pass, detail: `insert1 rows=${r1.rowCount} err=${r1.err}; insert2 rows=${r2.rowCount} err=${r2.err}; total=${total} (expected one success and SQLSTATE 23505)` };
+  return { name, pass, detail: `insert1 rows=${r1.rowCount} err=${r1.err}; insert2 rows=${r2.rowCount} err=${r2.err}; total=${total} (expected exactly one committed assignment and one no-op)` };
 }
 
 async function scenario8(ids: Ids): Promise<Scenario> {
@@ -370,18 +370,52 @@ async function scenario8(ids: Ids): Promise<Scenario> {
     const b = await c.query("INSERT INTO ride_offers (ride_id, driver_id, status, round_no, expires_at) VALUES ($1,$2,'PENDING',1,now()+interval '5 minutes') RETURNING id", [rideId, ids.driver2UserId]);
     return { rideId, offer1: a.rows[0].id, offer2: b.rows[0].id };
   });
+  const accept = async (offerId: string, driverId: string, vehicleId: string): Promise<OpResult> => {
+    try {
+      return await withTxn(async c => {
+        const offer = (await c.query(
+          "SELECT ride_id FROM ride_offers WHERE id = $1 AND driver_id = $2",
+          [offerId, driverId],
+        )).rows[0];
+        if (!offer) return { rowCount: 0, err: 'OFFER_NOT_FOUND' };
+
+        const assigned = await c.query(
+          `UPDATE rides
+           SET status = 'ASSIGNED', driver_id = $1, vehicle_id = $2,
+               assigned_at = now(), start_code_nonce = decode('deadbeef','hex'),
+               start_code_expires_at = now() + interval '10 minutes'
+           WHERE id = $3 AND status = 'SEARCHING' AND driver_id IS NULL
+           RETURNING id`,
+          [driverId, vehicleId, offer.ride_id],
+        );
+        if ((assigned.rowCount ?? 0) !== 1) return { rowCount: 0, err: null };
+
+        await c.query(
+          "UPDATE ride_offers SET status='ACCEPTED', responded_at=now() WHERE id=$1 AND status='PENDING'",
+          [offerId],
+        );
+        await c.query(
+          "UPDATE ride_offers SET status='CANCELLED', responded_at=now() WHERE ride_id=$1 AND id<>$2 AND status='PENDING'",
+          [offer.ride_id, offerId],
+        );
+        return { rowCount: 1, err: null };
+      });
+    } catch (e: any) {
+      return { rowCount: 0, err: e?.code ?? String(e?.message ?? e) };
+    }
+  };
   const [a, b] = await Promise.all([
-    op("UPDATE ride_offers SET status='ACCEPTED', responded_at=now() WHERE id=$1 AND status='PENDING'", [offer1]),
-    op("UPDATE ride_offers SET status='ACCEPTED', responded_at=now() WHERE id=$1 AND status='PENDING'", [offer2]),
+    accept(offer1, ids.driver1UserId, ids.vehicle1Id),
+    accept(offer2, ids.driver2UserId, ids.vehicle2Id),
   ]);
   const total = a.rowCount + b.rowCount;
-  const pass = total === 1 && [a.err, b.err].includes('23505');
+  const pass = total === 1 && a.err === null && b.err === null;
   await withTxn(async c => {
     await c.query("UPDATE ride_offers SET status='CANCELLED', responded_at=now() WHERE ride_id=$1 AND status='PENDING'", [rideId]);
     await c.query(cleanupRideSql, [[rideId]]);
     await c.query("DELETE FROM ride_offers WHERE ride_id=$1", [rideId]);
   });
-  return { name, pass, detail: `offer1 rows=${a.rowCount} err=${a.err}; offer2 rows=${b.rowCount} err=${b.err}; accepted total=${total} (expected one success and SQLSTATE 23505)` };
+  return { name, pass, detail: `offer1 rows=${a.rowCount} err=${a.err}; offer2 rows=${b.rowCount} err=${b.err}; accepted total=${total} (expected exactly one committed assignment and one no-op)` };
 }
 
 async function main(): Promise<void> {

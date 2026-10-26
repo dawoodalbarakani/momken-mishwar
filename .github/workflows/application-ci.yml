@@ -11,6 +11,8 @@ on:
       - 'database/**'
       - 'package.json'
       - 'package-lock.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/**'
   pull_request:
     branches: [main, master]
@@ -22,6 +24,8 @@ on:
       - 'database/**'
       - 'package.json'
       - 'package-lock.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/**'
   workflow_dispatch:
 
@@ -36,6 +40,22 @@ jobs:
   api:
     name: API checks
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: mishwar_test
+          POSTGRES_USER: mishwar
+          POSTGRES_PASSWORD: mishwar_test_only
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U mishwar -d mishwar_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://mishwar:mishwar_test_only@localhost:5433/mishwar_test
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -46,20 +66,38 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: package-lock.json
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Apply database migrations
+        run: ./database/run-migrations.sh
+
+      - name: Generate Prisma client
+        run: pnpm --filter @mishwar/api run prisma:generate
 
       - name: Typecheck API
-        run: npm --workspace @mishwar/api run typecheck
+        run: pnpm --filter @mishwar/api run typecheck
 
       - name: Run API tests
-        run: npm --workspace @mishwar/api test
+        env:
+          JWT_ACCESS_SECRET: test-only-access-secret-32-bytes-minimum-0001
+          JWT_REFRESH_SECRET: test-only-refresh-secret-32-bytes-minimum-0002
+          START_CODE_SECRET: test-only-start-code-secret-32-bytes-minimum-0003
+        run: pnpm --filter @mishwar/api test
 
       - name: Build API
-        run: npm --workspace @mishwar/api run build
+        run: pnpm --filter @mishwar/api run build
 
   postgres-integration:
     name: PostgreSQL migrations and concurrency integration
@@ -90,16 +128,19 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: package-lock.json
 
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Apply database migrations
         run: ./database/run-migrations.sh
@@ -110,7 +151,7 @@ jobs:
           test "$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X -t -A -c "SELECT count(*) FROM schema_migrations;")" -ge 2
 
       - name: Run real PostgreSQL concurrency integration scenarios
-        run: npm --workspace @mishwar/api exec -- tsx src/concurrency_scenarios.ts
+        run: pnpm --filter @mishwar/api exec tsx src/concurrency_scenarios.ts
 
   admin-web:
     name: Admin web checks

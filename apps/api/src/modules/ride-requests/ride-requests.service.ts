@@ -9,6 +9,11 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { PricingService } from '../pricing/pricing.service.js';
 import { transition, type RideSnapshot, type Actor } from '../../domain/ride-state.js';
 
+// Keep row typing local without passing a generic to Prisma's generated raw-query method.
+const queryRaw = <T>(tx: any) =>
+  (strings: TemplateStringsArray, ...values: any[]): Promise<T> =>
+    tx.$queryRaw(strings, ...values) as Promise<T>;
+
 @Injectable()
 export class RideRequestsService {
   constructor(private prisma: PrismaService, private pricing: PricingService) {}
@@ -35,7 +40,7 @@ export class RideRequestsService {
     return this.prisma.tx(async (tx) => {
       // Serialize ride creation for this customer across API instances. The DB also
       // has a partial unique index on active rides as a final integrity boundary.
-      const customer = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM users WHERE id = ${params.customerId} FOR UPDATE`;
+      const customer = await queryRaw<Array<{ id: string }>>(tx)`SELECT id FROM users WHERE id = ${params.customerId} FOR UPDATE`;
       if (customer.length === 0) throw new NotFoundException('المستخدم غير موجود', 'Customer not found');
 
       const existing = await tx.idempotencyKeys.findUnique({
@@ -72,7 +77,7 @@ export class RideRequestsService {
 
       // Insert and capture the exact generated id in the same statement; never
       // select "the latest SEARCHING ride", which can belong to another request.
-      const [rideIdRow] = await tx.$queryRaw<Array<{ id: string }>>`
+      const [rideIdRow] = await queryRaw<Array<{ id: string }>>(tx)`
         INSERT INTO rides (
           id, customer_id, service_area_id, vehicle_type_id, status, pickup, destination,
           currency_code, pricing_rule_id, pricing_rule_version, price_breakdown,

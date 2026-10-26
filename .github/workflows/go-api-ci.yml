@@ -1,0 +1,47 @@
+name: Go API CI
+
+on:
+  push:
+    branches: [feat/api-go-backend]
+    paths:
+      - 'api_go/**'
+      - '.github/workflows/go-api-ci.yml'
+  pull_request:
+    paths:
+      - 'api_go/**'
+      - '.github/workflows/go-api-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Format, test, and vet
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api_go
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+          cache-dependency-path: api_go/go.sum
+      - name: Check formatting
+        run: |
+          files="$(gofmt -l $(find . -name '*.go' -type f))"
+          if [ -n "$files" ]; then
+            echo "Go files need gofmt:"
+            echo "$files"
+            exit 1
+          fi
+      - name: Run tests
+        run: go test ./...
+      - name: Run vet
+        run: go vet ./...
