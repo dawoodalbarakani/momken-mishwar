@@ -10,7 +10,9 @@ import '../view_models/offers_view_model.dart';
 import '../../../../l10n/app_localizations.dart';
 
 class OffersScreen extends ConsumerStatefulWidget {
-  const OffersScreen({super.key});
+  final String? selectedRideId;
+
+  const OffersScreen({this.selectedRideId, super.key});
 
   @override
   ConsumerState<OffersScreen> createState() => _OffersScreenState();
@@ -36,6 +38,18 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(offersViewModelProvider);
+    final offers = [...vm.offers];
+    final selectedRideId = widget.selectedRideId;
+    if (selectedRideId != null) {
+      // Keep all offers visible, but bring the selected ride's offer to the
+      // front so the driver's original choice survives this navigation.
+      offers.sort((a, b) {
+        final aSelected = a.rideId == selectedRideId;
+        final bSelected = b.rideId == selectedRideId;
+        if (aSelected == bSelected) return 0;
+        return aSelected ? -1 : 1;
+      });
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.offers),
@@ -61,9 +75,9 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
                 const SizedBox(height: UberSpacing.md),
               ],
               Expanded(
-                child: vm.isLoading && vm.offers.isEmpty
+                child: vm.isLoading && offers.isEmpty
                     ? const Center(child: CircularProgressIndicator())
-                    : vm.offers.isEmpty
+                    : offers.isEmpty
                     ? const UberEmptyState(
                         icon: Icons.local_offer_outlined,
                         title: 'لا توجد طلبات الآن',
@@ -72,9 +86,10 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
                     : RefreshIndicator(
                         onRefresh: () async => ref.read(offersViewModelProvider.notifier).fetchOffers(),
                         child: _OfferList(
-                          offers: vm.offers,
+                          offers: offers,
                           hasActiveRide: vm.hasActiveRide,
                           accepting: vm.accepting,
+                          selectedRideId: selectedRideId,
                         ),
                       ),
               ),
@@ -139,8 +154,14 @@ class _OfferList extends ConsumerWidget {
   final List<Offer> offers;
   final bool hasActiveRide;
   final bool accepting;
+  final String? selectedRideId;
 
-  const _OfferList({required this.offers, required this.hasActiveRide, required this.accepting});
+  const _OfferList({
+    required this.offers,
+    required this.hasActiveRide,
+    required this.accepting,
+    required this.selectedRideId,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -153,6 +174,7 @@ class _OfferList extends ConsumerWidget {
         offer: offers[i],
         hasActiveRide: hasActiveRide,
         accepting: accepting,
+        highlighted: selectedRideId != null && offers[i].rideId == selectedRideId,
       ),
     );
   }
@@ -162,8 +184,14 @@ class _OfferCard extends ConsumerWidget {
   final Offer offer;
   final bool hasActiveRide;
   final bool accepting;
+  final bool highlighted;
 
-  const _OfferCard({required this.offer, required this.hasActiveRide, required this.accepting});
+  const _OfferCard({
+    required this.offer,
+    required this.hasActiveRide,
+    required this.accepting,
+    required this.highlighted,
+  });
 
   bool get _canRespond =>
       offer.status == OfferStatus.pending && !offer.isExpired && !hasActiveRide;
@@ -171,10 +199,18 @@ class _OfferCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return UberCard(
+      featured: highlighted,
       padding: const EdgeInsets.all(UberSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (highlighted) ...[
+            const Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: UberStatusPill(label: 'الرحلة المحددة', tone: UberStatusTone.active),
+            ),
+            const SizedBox(height: UberSpacing.sm),
+          ],
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
