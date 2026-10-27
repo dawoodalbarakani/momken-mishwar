@@ -105,6 +105,24 @@ void main() {
       await disposeTree(tester);
     });
 
+    testWidgets('shows all five destinations and selects Documents', (tester) async {
+      await pumpAtViewport(
+        tester,
+        _viewports['mobile (375px)']!,
+        const DriverNavShell(
+          location: '/documents',
+          child: DocumentsScreen(),
+        ),
+      );
+
+      final navigation = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(navigation.destinations, hasLength(5));
+      expect(navigation.selectedIndex, 3);
+      expect(find.text('المستندات'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await disposeTree(tester);
+    });
+
     testWidgets('compact NavigationRail on tablet', (tester) async {
       await pumpAtViewport(
         tester,
