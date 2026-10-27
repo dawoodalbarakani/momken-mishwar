@@ -27,6 +27,14 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Maps keys are client-side identifiers, not secrets. Supply via CI
+        // environment or a local Gradle property and restrict the key by
+        // Android package name + signing certificate in Google Cloud.
+        val mapsApiKey = providers.gradleProperty("MISHWAR_MAP_API_KEY")
+            .orElse(providers.environmentVariable("MISHWAR_MAP_API_KEY"))
+            .getOrElse("")
+        manifestPlaceholders["mapsApiKey"] = mapsApiKey
     }
 
     buildTypes {
