@@ -303,7 +303,11 @@ class _RideList extends StatelessWidget {
         final minutes = r.expiresAt.difference(DateTime.now()).inMinutes;
         return UberCard(
           padding: const EdgeInsets.symmetric(horizontal: UberSpacing.lg, vertical: UberSpacing.md),
-          onTap: offline ? null : () => context.go('/offers'),
+          // Preserve the selected ride through navigation so the offers
+          // screen can resolve the matching request instead of losing context.
+          onTap: offline
+              ? null
+              : () => context.go('/offers?rideId=${Uri.encodeQueryComponent(r.rideId)}'),
           child: Row(
             children: [
               Expanded(
