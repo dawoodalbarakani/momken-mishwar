@@ -75,7 +75,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
           GoRoute(path: '/earnings', builder: (context, state) => const EarningsScreen()),
-          GoRoute(path: '/offers', builder: (context, state) => const OffersScreen()),
+          GoRoute(
+            path: '/offers',
+            builder: (context, state) => OffersScreen(
+              selectedRideId: state.uri.queryParameters['rideId'],
+            ),
+          ),
           GoRoute(path: '/documents', builder: (context, state) => const DocumentsScreen()),
           GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
         ],
