@@ -123,5 +123,22 @@
         "example": "771234567"
       }
     }
-  }
+  },
+  "payoutInvalidAmount": "أدخل مبلغاً صحيحاً",
+  "payoutRequestFailed": "فشل الإرسال",
+  "payoutRequestSent": "تم إرسال طلب التسوية للمراجعة",
+  "filePickerStubNotice": "يتم فتح منتقي الملفات (يحتاج حزمة file_picker)",
+  "otpIncomplete": "أدخل الرمز الكامل من 6 أرقام",
+  "otpInvalid": "رمز التحقق غير صحيح",
+  "otpResent": "أُعيد إرسال الرمز",
+  "otpResendFailed": "فشل إعادة الإرسال",
+  "completeRequiredFields": "أكمل جميع الحقول المطلوبة",
+  "registerFailed": "فشل التسجيل",
+  "offerAcceptFailed": "فشل القبول",
+  "offerAcceptedNotice": "تم قبول الطلب وتوجيهك للرحلة",
+  "assignmentVerifyFailed": "فشل التحقق من الإسناد",
+  "assignmentVerifiedNotice": "تم التحقق من إسناد الرحلة",
+  "rideStartedNotice": "بدأت الرحلة",
+  "rideCompleteFailed": "فشل إنهاء الرحلة",
+  "rideCompletedNotice": "تم إنهاء الرحلة"
 }

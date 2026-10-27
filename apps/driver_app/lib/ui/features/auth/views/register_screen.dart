@@ -51,7 +51,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _nationalIdController.text.trim().isEmpty ||
         _licenseController.text.trim().isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل جميع الحقول المطلوبة')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.completeRequiredFields)));
       }
       return;
     }
@@ -70,7 +70,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       context.go('/login?phone=$phone');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ref.read(authViewModelProvider).error ?? 'فشل التسجيل')),
+        SnackBar(content: Text(ref.read(authViewModelProvider).error ?? AppLocalizations.of(context)!.registerFailed)),
       );
     }
   }
