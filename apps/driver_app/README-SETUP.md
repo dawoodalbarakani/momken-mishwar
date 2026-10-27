@@ -27,7 +27,6 @@
    ```bash
    export MISHWAR_MAP_API_KEY="YOUR_RESTRICTED_ANDROID_MAPS_KEY"
    flutter run
-   # أو: flutter build apk --dart-define=... (المفتاح هنا يُقرأ من بيئة Gradle، وليس dart-define)
    ```
    أو استخدم `-PMISHWAR_MAP_API_KEY=...` مع أمر Gradle. المفتاح المضمّن في APK يمكن استخراجه دائماً؛ قيّده في Google Cloud باسم الحزمة `com.mishwar.driver` وبصمة شهادة التوقيع، وفعّل Google Maps SDK for Android فقط عند الحاجة. **دوّر المفتاح الذي سبق تضمينه في المستودع**، لأن حذفه من الملف لا يبطل النسخ السابقة أو سجل Git.
 
