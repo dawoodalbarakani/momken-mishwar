@@ -50,7 +50,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // document upload until they are approved.
       if (!auth.isAuthenticated) return '/login';
       if (!auth.isApproved) return loc == '/documents' ? null : '/documents';
-      if (loc == '/documents') return '/home';
+      // Approved drivers can revisit documents from the main navigation.
       return null;
     },
     routes: [
@@ -64,12 +64,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           return OtpScreen(phone: phone);
         },
       ),
-      GoRoute(path: '/documents', builder: (context, state) => const DocumentsScreen()),
-      // Home/offers/earnings/profile are the app's top-level sections, so they
-      // share a navigation shell that swaps between a bottom bar (mobile) and a
-      // side rail (tablet/desktop). Ride tracking and payout-request stay
-      // outside the shell: they are focused, single-task screens reached from
-      // within a section, not sections themselves.
+      // The main sections share adaptive navigation. Documents is available
+      // to approved drivers too, while the redirect above still pins drivers
+      // who are awaiting approval to this screen.
       ShellRoute(
         builder: (context, state, child) => DriverNavShell(
           location: state.matchedLocation,
@@ -77,8 +74,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ),
         routes: [
           GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
-          GoRoute(path: '/offers', builder: (context, state) => const OffersScreen()),
           GoRoute(path: '/earnings', builder: (context, state) => const EarningsScreen()),
+          GoRoute(path: '/offers', builder: (context, state) => const OffersScreen()),
+          GoRoute(path: '/documents', builder: (context, state) => const DocumentsScreen()),
           GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
         ],
       ),
@@ -116,8 +114,9 @@ class DriverNavShell extends StatelessWidget {
 
   static const _destinations = <_NavDestination>[
     _NavDestination('/home', Icons.home_outlined, Icons.home, 'الرئيسية'),
-    _NavDestination('/offers', Icons.local_offer_outlined, Icons.local_offer, 'العروض'),
     _NavDestination('/earnings', Icons.account_balance_wallet_outlined, Icons.account_balance_wallet, 'الأرباح'),
+    _NavDestination('/offers', Icons.local_offer_outlined, Icons.local_offer, 'العروض'),
+    _NavDestination('/documents', Icons.description_outlined, Icons.description, 'المستندات'),
     _NavDestination('/profile', Icons.person_outline, Icons.person, 'الملف الشخصي'),
   ];
 
