@@ -21,7 +21,15 @@
    ثبّت هذه المتغيرات في بيئة البناء (لا تُcommits أي قيم حقيقية):
    - `MISHWAR_API_BASE_URL` — عنوان API القاعدة (المسار `/v1`)
    - `MISHWAR_WS_BASE_URL` — عنوان WebSocket لأحداث الرحلات والعروض
-   - `MISHWAR_MAP_API_KEY` — مفتاح مزود الخرائط (Google Cloud Console / Mapbox studio) — **لا تُدرج في المستودع**
+   - `MISHWAR_MAP_API_KEY` — مفتاح Google Maps Android SDK — **لا تُدرج في المستودع**.
+
+   مرّر المفتاح إلى Gradle عبر متغير البيئة أو الخاصية:
+   ```bash
+   export MISHWAR_MAP_API_KEY="YOUR_RESTRICTED_ANDROID_MAPS_KEY"
+   flutter run
+   # أو: flutter build apk --dart-define=... (المفتاح هنا يُقرأ من بيئة Gradle، وليس dart-define)
+   ```
+   أو استخدم `-PMISHWAR_MAP_API_KEY=...` مع أمر Gradle. المفتاح المضمّن في APK يمكن استخراجه دائماً؛ قيّده في Google Cloud باسم الحزمة `com.mishwar.driver` وبصمة شهادة التوقيع، وفعّل Google Maps SDK for Android فقط عند الحاجة. **دوّر المفتاح الذي سبق تضمينه في المستودع**، لأن حذفه من الملف لا يبطل النسخ السابقة أو سجل Git.
 
 ## الخرائط (مطلوب استبدال stub)
 الطبقات المُنشَأة تستخدم `StubMapProvider` التي تُطلق `UnimplementedError` على كل عملية. قبل النشر استبدلها بتنفيذ حقيقي (Google Maps Flutter أو flutter_map) مع مفتاح من لوحة المزود. راجع `lib/core/map_provider.dart`.
