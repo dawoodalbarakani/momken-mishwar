@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_router.dart';
 import 'core/app_constants.dart';
+import 'l10n/app_localizations.dart';
 import 'ui/core/app_theme.dart';
 
 void main() {
@@ -22,6 +23,7 @@ class DriverApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: appTheme(),
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

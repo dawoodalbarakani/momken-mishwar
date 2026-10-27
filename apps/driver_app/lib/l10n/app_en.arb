@@ -72,5 +72,11 @@
   "sendPayoutRequest": "Send request",
   "dataAge": "Data age: ",
   "live": "Live",
-  "stale": "Stale/unreliable"
+  "stale": "Stale/unreliable",
+  "appName": "Mishwar Yemen",
+  "loginSubtitle": "Enter your Yemeni phone number to request a verification code.",
+  "invalidYemeniPhone": "Enter a valid Yemeni phone number (e.g. {example})",
+  "requestOtpFailed": "Failed to request the code",
+  "createDriverAccount": "Create a new driver account",
+  "demoModeFilled": "Demo mode: phone number and OTP are pre-filled automatically"
 }

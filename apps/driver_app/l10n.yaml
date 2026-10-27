@@ -1,0 +1,6 @@
+# Arabic is the canonical catalogue: every key in app_ar.arb defines the
+# generated API, and app_en.arb is validated against it.
+arb-dir: lib/l10n
+template-arb-file: app_ar.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations

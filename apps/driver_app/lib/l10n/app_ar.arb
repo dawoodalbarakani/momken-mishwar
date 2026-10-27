@@ -72,5 +72,47 @@
   "sendPayoutRequest": "إرسال الطلب",
   "dataAge": "عمر البيانات: ",
   "live": "مباشر",
-  "stale": "قديم/غير موثوق"
+  "stale": "قديم/غير موثوق",
+  "appName": "مشوار اليمن",
+  "loginSubtitle": "أدخل رقم هاتفك اليمني لطلب رمز التحقق.",
+  "invalidYemeniPhone": "أدخل رقم هاتف يمني صحيح (مثال: {example})",
+  "requestOtpFailed": "فشل طلب الرمز",
+  "createDriverAccount": "إنشاء حساب سائق جديد",
+  "demoModeFilled": "وضع العرض التجريبي: رقم الهاتف ورمز التحقق معبّآن تلقائياً",
+  "@otpInstruction": {
+    "description": "OTP prompt naming the phone number the code was sent to",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "+967771234567"
+      }
+    }
+  },
+  "@resendingIn": {
+    "description": "Resend cooldown countdown, in seconds",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "example": "30"
+      }
+    }
+  },
+  "@expiresIn": {
+    "description": "Offer expiry countdown, in whole minutes",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "@invalidYemeniPhone": {
+    "description": "Shown when the entered number is too short to be a Yemeni phone number",
+    "placeholders": {
+      "example": {
+        "type": "String",
+        "example": "771234567"
+      }
+    }
+  }
 }

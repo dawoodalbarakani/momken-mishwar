@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/app_constants.dart';
 import '../../../../core/demo_mode.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../data/mock/demo_data.dart';
 import '../../../core/app_theme.dart';
 import '../../../core/responsive.dart';
@@ -46,11 +47,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _requestOtp() async {
     if (_requesting) return;
+    final l10n = AppLocalizations.of(context)!;
     final phone = _normalizePhone(_phoneController.text.trim());
     if (phone.length < AppConstants.yemenCountryCode.length + 7) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('أدخل رقم هاتف يمني صحيح (مثال: 771234567)')),
+          SnackBar(content: Text(l10n.invalidYemeniPhone(l10n.phoneHint))),
         );
       }
       return;
@@ -63,15 +65,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       context.go('/otp?phone=$phone');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ref.read(authViewModelProvider).error ?? 'فشل طلب الرمز')),
+        SnackBar(
+          content: Text(ref.read(authViewModelProvider).error ?? l10n.requestOtpFailed),
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('مشوار اليمن')),
+      appBar: AppBar(title: Text(l10n.appName)),
       body: Padding(
         padding: context.responsivePadding,
         child: ContentMaxWidth(
@@ -79,13 +84,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: ListView(
             children: [
               const SizedBox(height: UberSpacing.sm),
-              const Text(
-                'تسجيل الدخول',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.25, color: UberColors.black),
+              Text(
+                l10n.login,
+                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.25, color: UberColors.black),
               ),
               const SizedBox(height: UberSpacing.sm),
               Text(
-                'أدخل رقم هاتفك اليمني لطلب رمز التحقق.',
+                l10n.loginSubtitle,
                 style: UberTypography.caption,
               ),
               const SizedBox(height: UberSpacing.xl),
@@ -94,16 +99,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _requestOtp(),
-                decoration: const InputDecoration(
-                  labelText: 'رقم الهاتف',
-                  prefixText: '+967 ',
-                  hintText: '771234567',
+                decoration: InputDecoration(
+                  labelText: l10n.phoneLabel,
+                  prefixText: '${AppConstants.yemenCountryCode} ',
+                  hintText: l10n.phoneHint,
                 ),
               ),
               if (ref.watch(demoModeProvider)) ...[
                 const SizedBox(height: UberSpacing.sm),
                 Text(
-                  'وضع العرض التجريبي: رقم الهاتف ورمز التحقق معبّآن تلقائياً',
+                  l10n.demoModeFilled,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.labelSmall,
                 ),
@@ -117,10 +122,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: UberColors.white),
                       )
-                    : const Text('طلب رمز التحقق'),
+                    : Text(l10n.requestOtp),
               ),
               const SizedBox(height: UberSpacing.sm),
-              TextButton(onPressed: () => context.go('/register'), child: const Text('إنشاء حساب سائق جديد')),
+              TextButton(onPressed: () => context.go('/register'), child: Text(l10n.createDriverAccount)),
             ],
           ),
         ),

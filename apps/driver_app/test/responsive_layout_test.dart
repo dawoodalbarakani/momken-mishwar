@@ -8,6 +8,7 @@ import 'package:driver_app/app_router.dart';
 import 'package:driver_app/core/app_constants.dart';
 import 'package:driver_app/data/mock/demo_data.dart';
 import 'package:driver_app/data/mock/demo_repositories.dart';
+import 'package:driver_app/l10n/app_localizations.dart';
 import 'package:driver_app/ui/core/app_theme.dart';
 import 'package:driver_app/ui/features/auth/views/documents_screen.dart';
 import 'package:driver_app/ui/features/auth/views/login_screen.dart';
@@ -47,6 +48,7 @@ Future<void> pumpAtViewport(WidgetTester tester, Size size, Widget screen) async
         locale: AppConstants.defaultLocale,
         supportedLocales: AppConstants.supportedLocales,
         localizationsDelegates: const [
+          AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
