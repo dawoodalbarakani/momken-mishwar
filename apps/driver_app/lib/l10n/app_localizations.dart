@@ -290,6 +290,12 @@ abstract class AppLocalizations {
   /// **'تتبع الرحلة'**
   String get rideTracking;
 
+  /// Header title identifying the specific ride being tracked
+  ///
+  /// In ar, this message translates to:
+  /// **'الرحلة {rideId}'**
+  String rideNumber(String rideId);
+
   /// No description provided for @status.
   ///
   /// In ar, this message translates to:

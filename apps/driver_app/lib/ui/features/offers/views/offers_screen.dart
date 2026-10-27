@@ -7,6 +7,7 @@ import '../../../core/app_theme.dart';
 import '../../../core/responsive.dart';
 import '../../../core/uber_components.dart';
 import '../view_models/offers_view_model.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class OffersScreen extends ConsumerStatefulWidget {
   const OffersScreen({super.key});
@@ -37,7 +38,7 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
     final vm = ref.watch(offersViewModelProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('العروض'),
+        title: Text(AppLocalizations.of(context)!.offers),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

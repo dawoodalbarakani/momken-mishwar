@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/app_theme.dart';
 import '../../../core/responsive.dart';
 import '../view_models/earnings_view_model.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class PayoutRequestScreen extends ConsumerStatefulWidget {
   const PayoutRequestScreen({super.key});
@@ -44,7 +45,7 @@ class _PayoutRequestScreenState extends ConsumerState<PayoutRequestScreen> {
   Widget build(BuildContext context) {
     final vm = ref.watch(earningsViewModelProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('طلب تسوية')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.payoutRequest)),
       body: Padding(
         padding: context.responsivePadding,
         child: ContentMaxWidth(

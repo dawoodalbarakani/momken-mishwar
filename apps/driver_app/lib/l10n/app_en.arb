@@ -33,6 +33,7 @@
   "activeRide": "You have an active ride",
   "noNewOffers": "No new offers until current ride ends",
   "rideTracking": "Ride tracking",
+  "rideNumber": "Ride {rideId}",
   "status": "Status",
   "assigned": "Assigned",
   "arriving": "Arriving",

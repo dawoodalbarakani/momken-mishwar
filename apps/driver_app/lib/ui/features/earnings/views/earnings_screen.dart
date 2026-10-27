@@ -7,6 +7,7 @@ import '../../../core/app_theme.dart';
 import '../../../core/responsive.dart';
 import '../../../core/uber_components.dart';
 import '../view_models/earnings_view_model.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class EarningsScreen extends ConsumerWidget {
   const EarningsScreen({super.key});
@@ -15,7 +16,7 @@ class EarningsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(earningsViewModelProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('الأرباح')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.earnings)),
       body: Padding(
         padding: context.responsivePadding,
         child: ContentMaxWidth(

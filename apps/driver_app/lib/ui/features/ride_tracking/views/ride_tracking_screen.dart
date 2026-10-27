@@ -7,6 +7,7 @@ import '../../../core/responsive.dart';
 import '../../../core/uber_components.dart';
 import '../../offers/view_models/offers_view_model.dart';
 import '../view_models/ride_tracking_view_model.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class RideTrackingScreen extends ConsumerStatefulWidget {
   final String rideId;
@@ -33,7 +34,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
     final vm = ref.watch(rideTrackingViewModelProvider(widget.rideId));
     final terminal = vm.status == RideStatus.completed || vm.status == RideStatus.cancelled;
     return Scaffold(
-      appBar: AppBar(title: Text('الرحلة ${widget.rideId}')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.rideNumber(widget.rideId))),
       body: Column(
         children: [
           Expanded(

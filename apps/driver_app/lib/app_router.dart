@@ -16,6 +16,7 @@ import 'ui/features/offers/views/offers_screen.dart';
 import 'ui/features/ride_tracking/views/ride_tracking_screen.dart';
 import 'ui/features/earnings/views/earnings_screen.dart';
 import 'ui/features/earnings/views/payout_request_screen.dart';
+import 'l10n/app_localizations.dart';
 
 /// Routes reachable before the session restore has completed.
 const _publicRoutes = <String>{'/login', '/register', '/otp'};
@@ -247,7 +248,7 @@ class ProfileScreen extends ConsumerWidget {
     final status = auth.user?.verificationStatus;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('الملف الشخصي')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.profile)),
       body: Padding(
         padding: context.responsivePadding,
         child: ContentMaxWidth(

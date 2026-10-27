@@ -33,6 +33,15 @@
   "activeRide": "لديك رحلة نشطة",
   "noNewOffers": "لا يمكن قبول عروض جديدة حتى تنتهي الرحلة الحالية",
   "rideTracking": "تتبع الرحلة",
+  "rideNumber": "الرحلة {rideId}",
+  "@rideNumber": {
+    "description": "Header title identifying the specific ride being tracked",
+    "placeholders": {
+      "rideId": {
+        "type": "String"
+      }
+    }
+  },
   "status": "الحالة",
   "assigned": "مسندة",
   "arriving": "قادم",

@@ -7,6 +7,7 @@ import '../../../core/app_theme.dart';
 import '../../../core/responsive.dart';
 import '../../../core/uber_components.dart';
 import '../view_models/documents_view_model.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class DocumentsScreen extends ConsumerWidget {
   const DocumentsScreen({super.key});
@@ -15,7 +16,7 @@ class DocumentsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(documentsViewModelProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('المستندات والاعتماد')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.documents)),
       body: Padding(
         padding: context.responsivePadding,
         child: ContentMaxWidth(

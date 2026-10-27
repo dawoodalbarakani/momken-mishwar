@@ -111,6 +111,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rideTracking => 'Ride tracking';
 
   @override
+  String rideNumber(String rideId) {
+    return 'Ride $rideId';
+  }
+
+  @override
   String get status => 'Status';
 
   @override

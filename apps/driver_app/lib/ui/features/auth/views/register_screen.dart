@@ -6,6 +6,7 @@ import '../../../../core/app_constants.dart';
 import '../../../core/app_theme.dart';
 import '../../../core/responsive.dart';
 import '../view_models/auth_view_model.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -77,7 +78,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('تسجيل سائق')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.register)),
       body: Padding(
         padding: context.responsivePadding,
         child: ContentMaxWidth(

@@ -9,6 +9,7 @@ import '../../../core/responsive.dart';
 import '../../../core/uber_components.dart';
 import '../../offers/view_models/offers_view_model.dart';
 import '../view_models/home_view_model.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -36,7 +37,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final activeRideId = ref.watch(offersViewModelProvider.select((s) => s.activeRideId));
     final hasActiveRide = activeRideId != null && activeRideId.isNotEmpty;
     return Scaffold(
-      appBar: AppBar(title: const Text('الرئيسية')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.home)),
       body: Padding(
         padding: context.responsivePadding,
         child: ContentMaxWidth(

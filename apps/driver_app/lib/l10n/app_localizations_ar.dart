@@ -111,6 +111,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get rideTracking => 'تتبع الرحلة';
 
   @override
+  String rideNumber(String rideId) {
+    return 'الرحلة $rideId';
+  }
+
+  @override
   String get status => 'الحالة';
 
   @override

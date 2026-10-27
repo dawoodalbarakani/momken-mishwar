@@ -18,7 +18,7 @@ class DriverApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(goRouterProvider);
     return MaterialApp.router(
-      title: 'تطبيق السائق - مشوار اليمن',
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       theme: appTheme(),

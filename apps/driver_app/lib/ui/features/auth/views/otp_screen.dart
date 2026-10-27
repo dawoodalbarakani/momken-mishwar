@@ -10,6 +10,7 @@ import '../../../../data/mock/demo_data.dart';
 import '../../../core/app_theme.dart';
 import '../../../core/responsive.dart';
 import '../view_models/auth_view_model.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String phone;
@@ -103,7 +104,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('التحقق من الرمز')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.otpTitle)),
       body: Padding(
         padding: context.responsivePadding,
         child: ContentMaxWidth(
