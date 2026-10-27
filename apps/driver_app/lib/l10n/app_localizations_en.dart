@@ -256,4 +256,56 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get demoModeFilled =>
       'Demo mode: phone number and OTP are pre-filled automatically';
+
+  @override
+  String get payoutInvalidAmount => 'Enter a valid amount';
+
+  @override
+  String get payoutRequestFailed => 'Failed to send the request';
+
+  @override
+  String get payoutRequestSent => 'Settlement request sent for review';
+
+  @override
+  String get filePickerStubNotice =>
+      'Opening the file picker needs the file_picker package';
+
+  @override
+  String get otpIncomplete => 'Enter the full 6-digit code';
+
+  @override
+  String get otpInvalid => 'Incorrect verification code';
+
+  @override
+  String get otpResent => 'Verification code re-sent';
+
+  @override
+  String get otpResendFailed => 'Failed to re-send the code';
+
+  @override
+  String get completeRequiredFields => 'Complete all required fields';
+
+  @override
+  String get registerFailed => 'Registration failed';
+
+  @override
+  String get offerAcceptFailed => 'Failed to accept the offer';
+
+  @override
+  String get offerAcceptedNotice => 'Offer accepted, heading to the ride';
+
+  @override
+  String get assignmentVerifyFailed => 'Failed to verify the assignment';
+
+  @override
+  String get assignmentVerifiedNotice => 'Ride assignment verified';
+
+  @override
+  String get rideStartedNotice => 'Ride started';
+
+  @override
+  String get rideCompleteFailed => 'Failed to end the ride';
+
+  @override
+  String get rideCompletedNotice => 'Ride completed';
 }

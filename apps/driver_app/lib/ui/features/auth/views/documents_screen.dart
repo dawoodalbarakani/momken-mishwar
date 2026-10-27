@@ -113,7 +113,7 @@ class DocumentsScreen extends ConsumerWidget {
 
   void _upload(BuildContext context, DocumentType type) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('يتم فتح منتقي الملفات (يحتاج حزمة file_picker)')),
+      SnackBar(content: Text(AppLocalizations.of(context)!.filePickerStubNotice)),
     );
   }
 

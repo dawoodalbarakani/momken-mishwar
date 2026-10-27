@@ -255,4 +255,56 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get demoModeFilled =>
       'وضع العرض التجريبي: رقم الهاتف ورمز التحقق معبّآن تلقائياً';
+
+  @override
+  String get payoutInvalidAmount => 'أدخل مبلغاً صحيحاً';
+
+  @override
+  String get payoutRequestFailed => 'فشل الإرسال';
+
+  @override
+  String get payoutRequestSent => 'تم إرسال طلب التسوية للمراجعة';
+
+  @override
+  String get filePickerStubNotice =>
+      'يتم فتح منتقي الملفات (يحتاج حزمة file_picker)';
+
+  @override
+  String get otpIncomplete => 'أدخل الرمز الكامل من 6 أرقام';
+
+  @override
+  String get otpInvalid => 'رمز التحقق غير صحيح';
+
+  @override
+  String get otpResent => 'أُعيد إرسال الرمز';
+
+  @override
+  String get otpResendFailed => 'فشل إعادة الإرسال';
+
+  @override
+  String get completeRequiredFields => 'أكمل جميع الحقول المطلوبة';
+
+  @override
+  String get registerFailed => 'فشل التسجيل';
+
+  @override
+  String get offerAcceptFailed => 'فشل القبول';
+
+  @override
+  String get offerAcceptedNotice => 'تم قبول الطلب وتوجيهك للرحلة';
+
+  @override
+  String get assignmentVerifyFailed => 'فشل التحقق من الإسناد';
+
+  @override
+  String get assignmentVerifiedNotice => 'تم التحقق من إسناد الرحلة';
+
+  @override
+  String get rideStartedNotice => 'بدأت الرحلة';
+
+  @override
+  String get rideCompleteFailed => 'فشل إنهاء الرحلة';
+
+  @override
+  String get rideCompletedNotice => 'تم إنهاء الرحلة';
 }

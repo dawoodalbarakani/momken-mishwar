@@ -67,7 +67,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   Future<void> _verify() async {
     if (_otp.length != AppConstants.otpLength) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل الرمز الكامل من 6 أرقام')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.otpIncomplete)));
       return;
     }
     setState(() => _verifying = true);
@@ -82,7 +82,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ref.read(authViewModelProvider).error ?? 'رمز التحقق غير صحيح')),
+        SnackBar(content: Text(ref.read(authViewModelProvider).error ?? AppLocalizations.of(context)!.otpInvalid)),
       );
     }
   }
@@ -93,10 +93,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     if (!mounted) return;
     if (ok) {
       _startResendTimer();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أُعيد إرسال الرمز')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.otpResent)));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ref.read(authViewModelProvider).error ?? 'فشل إعادة الإرسال')),
+        SnackBar(content: Text(ref.read(authViewModelProvider).error ?? AppLocalizations.of(context)!.otpResendFailed)),
       );
     }
   }

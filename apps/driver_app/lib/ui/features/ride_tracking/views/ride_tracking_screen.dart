@@ -145,7 +145,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
     final ok = await _notifier.verifyAssignment();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(ok ? 'تم التحقق من إسناد الرحلة' : 'فشل التحقق من الإسناد')),
+      SnackBar(content: Text(ok ? AppLocalizations.of(context)!.assignmentVerifiedNotice : AppLocalizations.of(context)!.assignmentVerifyFailed)),
     );
   }
 
@@ -153,7 +153,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
     final ok = await _notifier.startRide(_startCodeController.text);
     if (!mounted || !ok) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('بدأت الرحلة')),
+      SnackBar(content: Text(AppLocalizations.of(context)!.rideStartedNotice)),
     );
   }
 
@@ -165,7 +165,7 @@ class _RideTrackingScreenState extends ConsumerState<RideTrackingScreen> {
     if (ok) ref.read(offersViewModelProvider.notifier).endActiveRide();
     final error = ref.read(rideTrackingViewModelProvider(widget.rideId)).error;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(ok ? 'تم إنهاء الرحلة' : error ?? 'فشل إنهاء الرحلة')),
+      SnackBar(content: Text(ok ? AppLocalizations.of(context)!.rideCompletedNotice : error ?? AppLocalizations.of(context)!.rideCompleteFailed)),
     );
   }
 

@@ -571,6 +571,108 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'وضع العرض التجريبي: رقم الهاتف ورمز التحقق معبّآن تلقائياً'**
   String get demoModeFilled;
+
+  /// No description provided for @payoutInvalidAmount.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل مبلغاً صحيحاً'**
+  String get payoutInvalidAmount;
+
+  /// No description provided for @payoutRequestFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل الإرسال'**
+  String get payoutRequestFailed;
+
+  /// No description provided for @payoutRequestSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال طلب التسوية للمراجعة'**
+  String get payoutRequestSent;
+
+  /// No description provided for @filePickerStubNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'يتم فتح منتقي الملفات (يحتاج حزمة file_picker)'**
+  String get filePickerStubNotice;
+
+  /// No description provided for @otpIncomplete.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل الرمز الكامل من 6 أرقام'**
+  String get otpIncomplete;
+
+  /// No description provided for @otpInvalid.
+  ///
+  /// In ar, this message translates to:
+  /// **'رمز التحقق غير صحيح'**
+  String get otpInvalid;
+
+  /// No description provided for @otpResent.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُعيد إرسال الرمز'**
+  String get otpResent;
+
+  /// No description provided for @otpResendFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل إعادة الإرسال'**
+  String get otpResendFailed;
+
+  /// No description provided for @completeRequiredFields.
+  ///
+  /// In ar, this message translates to:
+  /// **'أكمل جميع الحقول المطلوبة'**
+  String get completeRequiredFields;
+
+  /// No description provided for @registerFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل التسجيل'**
+  String get registerFailed;
+
+  /// No description provided for @offerAcceptFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل القبول'**
+  String get offerAcceptFailed;
+
+  /// No description provided for @offerAcceptedNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم قبول الطلب وتوجيهك للرحلة'**
+  String get offerAcceptedNotice;
+
+  /// No description provided for @assignmentVerifyFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل التحقق من الإسناد'**
+  String get assignmentVerifyFailed;
+
+  /// No description provided for @assignmentVerifiedNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم التحقق من إسناد الرحلة'**
+  String get assignmentVerifiedNotice;
+
+  /// No description provided for @rideStartedNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدأت الرحلة'**
+  String get rideStartedNotice;
+
+  /// No description provided for @rideCompleteFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل إنهاء الرحلة'**
+  String get rideCompleteFailed;
+
+  /// No description provided for @rideCompletedNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إنهاء الرحلة'**
+  String get rideCompletedNotice;
 }
 
 class _AppLocalizationsDelegate

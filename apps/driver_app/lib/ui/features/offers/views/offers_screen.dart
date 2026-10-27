@@ -306,7 +306,7 @@ class _OfferCard extends ConsumerWidget {
       if (!context.mounted) return;
       final error = ref.read(offersViewModelProvider).error;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ok ? 'تم قبول الطلب وتوجيهك للرحلة' : error ?? 'فشل القبول')),
+        SnackBar(content: Text(ok ? AppLocalizations.of(context)!.offerAcceptedNotice : error ?? AppLocalizations.of(context)!.offerAcceptFailed)),
       );
       if (ok && context.mounted) context.go('/ride-track/${offer.rideId}');
     });

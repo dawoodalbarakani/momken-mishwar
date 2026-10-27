@@ -27,7 +27,7 @@ class _PayoutRequestScreenState extends ConsumerState<PayoutRequestScreen> {
   void _request() {
     final amount = double.tryParse(_amountController.text.trim()) ?? 0;
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل مبلغاً صحيحاً')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.payoutInvalidAmount)));
       return;
     }
     setState(() => _submitting = true);
@@ -35,7 +35,7 @@ class _PayoutRequestScreenState extends ConsumerState<PayoutRequestScreen> {
       if (!mounted) return;
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ok ? 'تم إرسال طلب التسوية للمراجعة' : ref.read(earningsViewModelProvider).error ?? 'فشل الإرسال')),
+        SnackBar(content: Text(ok ? AppLocalizations.of(context)!.payoutRequestSent : ref.read(earningsViewModelProvider).error ?? AppLocalizations.of(context)!.payoutRequestFailed)),
       );
       if (ok) context.go('/earnings');
     });

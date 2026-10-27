@@ -79,5 +79,22 @@
   "invalidYemeniPhone": "Enter a valid Yemeni phone number (e.g. {example})",
   "requestOtpFailed": "Failed to request the code",
   "createDriverAccount": "Create a new driver account",
-  "demoModeFilled": "Demo mode: phone number and OTP are pre-filled automatically"
+  "demoModeFilled": "Demo mode: phone number and OTP are pre-filled automatically",
+  "payoutInvalidAmount": "Enter a valid amount",
+  "payoutRequestSent": "Settlement request sent for review",
+  "payoutRequestFailed": "Failed to send the request",
+  "filePickerStubNotice": "Opening the file picker needs the file_picker package",
+  "otpIncomplete": "Enter the full 6-digit code",
+  "otpInvalid": "Incorrect verification code",
+  "otpResent": "Verification code re-sent",
+  "otpResendFailed": "Failed to re-send the code",
+  "completeRequiredFields": "Complete all required fields",
+  "registerFailed": "Registration failed",
+  "offerAcceptedNotice": "Offer accepted, heading to the ride",
+  "offerAcceptFailed": "Failed to accept the offer",
+  "assignmentVerifiedNotice": "Ride assignment verified",
+  "assignmentVerifyFailed": "Failed to verify the assignment",
+  "rideStartedNotice": "Ride started",
+  "rideCompletedNotice": "Ride completed",
+  "rideCompleteFailed": "Failed to end the ride"
 }
