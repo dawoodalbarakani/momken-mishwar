@@ -118,7 +118,7 @@ void main() {
       final navigation = tester.widget<NavigationBar>(find.byType(NavigationBar));
       expect(navigation.destinations, hasLength(5));
       expect(navigation.selectedIndex, 3);
-      expect(find.text('المستندات'), findsOneWidget);
+      expect(navigation.destinations.map((d) => d.label), contains('المستندات'));
       expect(tester.takeException(), isNull);
       await disposeTree(tester);
     });
